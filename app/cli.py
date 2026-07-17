@@ -15,17 +15,6 @@ from app.repositories.vector import VectorRepository
 from app.services.papers import PapersService
 from app.errors import NoArticlesError
 
-def restore_abstract(index):
-    if not index:
-        return None
-
-    words = {}
-    for word, positions in index.items():
-        for position in positions:
-            words[position] = word
-
-    return " ".join(words[i] for i in sorted(words))
-
 
 async def main() -> None:
     settings = get_settings()
@@ -53,14 +42,12 @@ async def main() -> None:
         vector_repository=repository
     )
     try:
-        articles = service.get_articles(query=args.keyword, limit=args.limit)
+        articles = await service.get_articles(query=args.keyword, limit=args.limit)
     except NoArticlesError:
         print("No articles found")
         return
 
     service.insert_articles(articles=articles)
-
-    print(restore_abstract(articles[0].abstract_inverted_index))
 
 
 if __name__ == "__main__":
