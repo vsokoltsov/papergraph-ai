@@ -1,7 +1,10 @@
+from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Any
 
 from qdrant_client import AsyncQdrantClient, models
+
+Vector = models.Document | list[float]
 
 
 @dataclass
@@ -10,7 +13,10 @@ class VectorRepository:
     collection_name: str
 
     def upload_papers(
-        self, ids: list[str], vectors: list[models.Document], payload: list[dict[str, Any]]
+        self,
+        ids: Sequence[str],
+        vectors: Sequence[Vector],
+        payload: Sequence[dict[str, Any]],
     ) -> None:
         self.db.upload_collection(
             collection_name=self.collection_name,

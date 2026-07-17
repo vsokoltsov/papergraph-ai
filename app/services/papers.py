@@ -1,10 +1,25 @@
+from collections.abc import Sequence
 from dataclasses import dataclass
+from typing import Any, Protocol
 from uuid import NAMESPACE_URL, uuid5
 
 from qdrant_client import models
 
-from app.clients.openalex import OpenAlexArticle, OpenAlexClient
-from app.repositories.vector import VectorRepository
+from app.clients.openalex import OpenAlexArticle
+from app.repositories.vector import Vector
+
+
+class OpenAlexArticlesClient(Protocol):
+    async def get_articles(self, query: str, limit: int = 20) -> list[OpenAlexArticle]: ...
+
+
+class PaperVectorRepository(Protocol):
+    def upload_papers(
+        self,
+        ids: Sequence[str],
+        vectors: Sequence[Vector],
+        payload: Sequence[dict[str, Any]],
+    ) -> None: ...
 
 
 def restore_abstract(index):
@@ -21,8 +36,8 @@ def restore_abstract(index):
 
 @dataclass
 class PapersService:
-    openalex_client: OpenAlexClient
-    vector_repository: VectorRepository
+    openalex_client: OpenAlexArticlesClient
+    vector_repository: PaperVectorRepository
 
     async def get_articles(self, query: str, limit: int = 20) -> list[OpenAlexArticle]:
         return await self.openalex_client.get_articles(query=query, limit=limit)
