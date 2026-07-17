@@ -5,12 +5,15 @@ Usage:
 """
 
 from __future__ import annotations
+import asyncio
 
 import argparse
 from app.settings import get_settings
 from app.clients.openalex import OpenAlexClient
-from qdrant_client import QdrantClient
-from qdrant_client.models import Distance, PointStruct, VectorParams
+from app.db.qdrant  import get_qdrant_client
+from app.repositories.vector import VectorRepository
+from app.services.papers import PapersService
+from app.errors import NoArticlesError
 
 def restore_abstract(index):
     if not index:
@@ -24,7 +27,7 @@ def restore_abstract(index):
     return " ".join(words[i] for i in sorted(words))
 
 
-def main() -> None:
+async def main() -> None:
     settings = get_settings()
 
     parser = argparse.ArgumentParser(description="Search OpenAlex articles by keyword.")
@@ -40,45 +43,25 @@ def main() -> None:
     openalex_client = OpenAlexClient(
         api_key=settings.OPENALEX_API_KEY
     )
-    articles = openalex_client.get_articles(
-        query=args.keyword,
-        limit=args.limit
+    client = get_qdrant_client(url=settings.QDRANT_URL)
+    repository = VectorRepository(
+        db=client,
+        collection_name=settings.QDRANT_COLLECTION_NAME
     )
-    client = QdrantClient(url=settings.QDRANT_URL)
-
-    collection_name = "papers"
-
-
-    client.upsert(
-        collection_name=collection_name,
-        points=[
-            PointStruct(
-                id=1,
-                vector=[0.1, 0.2, 0.3, 0.4],
-                payload={
-                    "openalex_id": "W123",
-                    "title": "Example Graph RAG Paper",
-                    "year": 2024,
-                },
-            )
-        ],
+    service = PapersService(
+        openalex_client=openalex_client,
+        vector_repository=repository
     )
-
-    results = client.query_points(
-        collection_name=collection_name,
-        query=[0.1, 0.2, 0.3, 0.4],
-        limit=3,
-    )
-
-    for point in results.points:
-        print("QUADRANT", point.score, point.payload)
-
-    if len(articles) == 0:
-        print("No articles found.")
+    try:
+        articles = service.get_articles(query=args.keyword, limit=args.limit)
+    except NoArticlesError:
+        print("No articles found")
         return
+
+    service.insert_articles(articles=articles)
 
     print(restore_abstract(articles[0].abstract_inverted_index))
 
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
