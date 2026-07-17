@@ -18,6 +18,7 @@ class OpenAlexArticle(BaseModel):
     ids: dict[str, Any] | None = None
     language: str | None = None
     primary_location: dict[str, Any] | None = None
+    best_oa_location: dict[str, Any] | None = None
     type: str | None = None
     indexed_in: list[str] | None = None
     open_access: dict[str, Any] | None = None
