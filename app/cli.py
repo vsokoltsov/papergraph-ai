@@ -5,15 +5,16 @@ Usage:
 """
 
 from __future__ import annotations
-import asyncio
 
 import argparse
-from app.settings import get_settings
+import asyncio
+
 from app.clients.openalex import OpenAlexClient
-from app.db.qdrant  import get_qdrant_client
+from app.db.qdrant import get_qdrant_client
+from app.errors import NoArticlesError
 from app.repositories.vector import VectorRepository
 from app.services.papers import PapersService
-from app.errors import NoArticlesError
+from app.settings import get_settings
 
 
 async def main() -> None:
@@ -29,18 +30,10 @@ async def main() -> None:
         help="Only include articles from this publication year onward.",
     )
     args = parser.parse_args()
-    openalex_client = OpenAlexClient(
-        api_key=settings.OPENALEX_API_KEY
-    )
+    openalex_client = OpenAlexClient(api_key=settings.OPENALEX_API_KEY)
     client = get_qdrant_client(url=settings.QDRANT_URL)
-    repository = VectorRepository(
-        db=client,
-        collection_name=settings.QDRANT_COLLECTION_NAME
-    )
-    service = PapersService(
-        openalex_client=openalex_client,
-        vector_repository=repository
-    )
+    repository = VectorRepository(db=client, collection_name=settings.QDRANT_COLLECTION_NAME)
+    service = PapersService(openalex_client=openalex_client, vector_repository=repository)
     try:
         articles = await service.get_articles(query=args.keyword, limit=args.limit)
     except NoArticlesError:

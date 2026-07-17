@@ -1,7 +1,8 @@
-from typing import Dict, Any
 from dataclasses import dataclass
-from qdrant_client import AsyncQdrantClient
-from qdrant_client import models
+from typing import Any
+
+from qdrant_client import AsyncQdrantClient, models
+
 
 @dataclass
 class VectorRepository:
@@ -9,10 +10,7 @@ class VectorRepository:
     collection_name: str
 
     def upload_papers(
-        self,
-        ids: list[str],
-        vectors: list[models.Document],
-        payload: list[Dict[str, Any]]
+        self, ids: list[str], vectors: list[models.Document], payload: list[dict[str, Any]]
     ) -> None:
         self.db.upload_collection(
             collection_name=self.collection_name,
@@ -20,4 +18,3 @@ class VectorRepository:
             vectors=vectors,
             payload=payload,
         )
-    

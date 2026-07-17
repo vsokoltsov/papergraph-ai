@@ -5,18 +5,17 @@ Revises: None
 Create Date: 2026-07-17
 """
 
-from typing import Sequence, Union
+from collections.abc import Sequence
 
 from qdrant_client import QdrantClient
 from qdrant_client.models import Distance, VectorParams
 
 from app.settings import get_settings
 
-
 revision: str = "20260717_0001"
-down_revision: Union[str, Sequence[str], None] = None
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | Sequence[str] | None = None
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 VECTOR_SIZE = 384
 
 

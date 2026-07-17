@@ -43,7 +43,6 @@ class OpenAlexArticle(BaseModel):
 class OpenAlexClient:
     api_key: str
 
-
     async def get_articles(self, query: str, limit: int = 20) -> list[OpenAlexArticle]:
         filters = ["type:article"]
         async with httpx.AsyncClient(timeout=20) as client:
