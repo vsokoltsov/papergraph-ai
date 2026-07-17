@@ -1,0 +1,1 @@
+class NoArticlesError(Exception): pass
