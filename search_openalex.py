@@ -9,6 +9,8 @@ from __future__ import annotations
 import argparse
 from app.settings import get_settings
 from app.clients.openalex import OpenAlexClient
+from qdrant_client import QdrantClient
+from qdrant_client.models import Distance, PointStruct, VectorParams
 
 def restore_abstract(index):
     if not index:
@@ -42,6 +44,34 @@ def main() -> None:
         query=args.keyword,
         limit=args.limit
     )
+    client = QdrantClient(url=settings.QDRANT_URL)
+
+    collection_name = "papers"
+
+
+    client.upsert(
+        collection_name=collection_name,
+        points=[
+            PointStruct(
+                id=1,
+                vector=[0.1, 0.2, 0.3, 0.4],
+                payload={
+                    "openalex_id": "W123",
+                    "title": "Example Graph RAG Paper",
+                    "year": 2024,
+                },
+            )
+        ],
+    )
+
+    results = client.query_points(
+        collection_name=collection_name,
+        query=[0.1, 0.2, 0.3, 0.4],
+        limit=3,
+    )
+
+    for point in results.points:
+        print("QUADRANT", point.score, point.payload)
 
     if len(articles) == 0:
         print("No articles found.")
