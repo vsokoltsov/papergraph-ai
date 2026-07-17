@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Any, List
+from typing import Any
 
 import httpx
 from pydantic import BaseModel, ConfigDict
@@ -44,18 +44,18 @@ class OpenAlexClient:
     api_key: str
 
 
-    def get_articles(self, query: str, limit: int = 20) -> List[OpenAlexArticle]:
+    async def get_articles(self, query: str, limit: int = 20) -> list[OpenAlexArticle]:
         filters = ["type:article"]
-        response = httpx.get(
-            "https://api.openalex.org/works",
-            params={
-                "api_key": self.api_key,
-                "search": query,
-                "filter": ",".join(filters),
-                "per-page": limit,
-            },
-            timeout=20,
-        )
+        async with httpx.AsyncClient(timeout=20) as client:
+            response = await client.get(
+                "https://api.openalex.org/works",
+                params={
+                    "api_key": self.api_key,
+                    "search": query,
+                    "filter": ",".join(filters),
+                    "per-page": limit,
+                },
+            )
         response.raise_for_status()
 
         data = response.json()

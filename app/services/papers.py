@@ -5,7 +5,6 @@ from qdrant_client import models
 from app.clients.openalex import OpenAlexClient, OpenAlexArticle
 
 from app.repositories.vector import VectorRepository
-from app.errors import NoArticlesError
 
 def restore_abstract(index):
     if not index:
@@ -23,15 +22,11 @@ class PapersService:
     openalex_client: OpenAlexClient
     vector_repository: VectorRepository
 
-    def get_articles(self, query: str, limit: int = 20) -> list[OpenAlexArticle]:
-        articles = self.openalex_client.get_articles(
+    async def get_articles(self, query: str, limit: int = 20) -> list[OpenAlexArticle]:
+        return await self.openalex_client.get_articles(
             query=query,
             limit=limit
         )
-        
-        if len(articles) == 0: raise NoArticlesError
-
-        return articles
 
     def insert_articles(self, articles: list[OpenAlexArticle]) -> None:
         ids = []
