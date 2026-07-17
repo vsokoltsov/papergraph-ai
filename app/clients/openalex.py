@@ -2,7 +2,10 @@ from dataclasses import dataclass
 from typing import Any
 
 import httpx
+from opentelemetry import trace
 from pydantic import BaseModel, ConfigDict
+
+tracer = trace.get_tracer(__name__)
 
 
 class OpenAlexArticle(BaseModel):
@@ -43,6 +46,7 @@ class OpenAlexArticle(BaseModel):
 class OpenAlexClient:
     api_key: str
 
+    @tracer.start_as_current_span("openalex.get_articles")
     async def get_articles(self, query: str, limit: int = 20) -> list[OpenAlexArticle]:
         filters = ["type:article"]
         async with httpx.AsyncClient(timeout=20) as client:

@@ -9,16 +9,22 @@ from __future__ import annotations
 import argparse
 import asyncio
 
+from opentelemetry import trace
+
 from app.clients.openalex import OpenAlexClient
 from app.db.qdrant import get_qdrant_client
 from app.errors import NoArticlesError
 from app.repositories.vector import VectorRepository
 from app.services.papers import PapersService
 from app.settings import get_settings
+from app.tracing import configure_tracing
+
+tracer = trace.get_tracer(__name__)
 
 
 async def main() -> None:
     settings = get_settings()
+    configure_tracing(settings)
 
     parser = argparse.ArgumentParser(description="Search OpenAlex articles by keyword.")
     parser.add_argument("keyword", help="Keyword or phrase to search for.")
@@ -34,8 +40,14 @@ async def main() -> None:
     client = get_qdrant_client(url=settings.QDRANT_URL)
     repository = VectorRepository(db=client, collection_name=settings.QDRANT_COLLECTION_NAME)
     service = PapersService(openalex_client=openalex_client, vector_repository=repository)
+
+    await search_and_insert_articles(service=service, query=args.keyword, limit=args.limit)
+
+
+@tracer.start_as_current_span("cli.search_openalex")
+async def search_and_insert_articles(service: PapersService, query: str, limit: int) -> None:
     try:
-        articles = await service.get_articles(query=args.keyword, limit=args.limit)
+        articles = await service.get_articles(query=query, limit=limit)
     except NoArticlesError:
         print("No articles found")
         return

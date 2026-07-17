@@ -3,10 +3,13 @@ from dataclasses import dataclass
 from typing import Any, Protocol
 from uuid import NAMESPACE_URL, uuid5
 
+from opentelemetry import trace
 from qdrant_client import models
 
 from app.clients.openalex import OpenAlexArticle
 from app.repositories.vector import Vector
+
+tracer = trace.get_tracer(__name__)
 
 
 class OpenAlexArticlesClient(Protocol):
@@ -39,15 +42,17 @@ class PapersService:
     openalex_client: OpenAlexArticlesClient
     vector_repository: PaperVectorRepository
 
+    @tracer.start_as_current_span("papers.get_articles")
     async def get_articles(self, query: str, limit: int = 20) -> list[OpenAlexArticle]:
         return await self.openalex_client.get_articles(query=query, limit=limit)
 
+    @tracer.start_as_current_span("papers.insert_articles")
     def insert_articles(self, articles: list[OpenAlexArticle]) -> None:
         ids = []
         vectors = []
         payloads = []
         model_name = "sentence-transformers/all-MiniLM-L6-v2"
-        for i, article in enumerate(articles):
+        for article in articles:
             abstract = restore_abstract(article.abstract_inverted_index)
             text = f"{article.title}\n{abstract or ''}"
             ids.append(str(uuid5(NAMESPACE_URL, article.id)))
