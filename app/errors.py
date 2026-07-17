@@ -1,1 +1,2 @@
-class NoArticlesError(Exception): pass
+class NoArticlesError(Exception):
+    pass
