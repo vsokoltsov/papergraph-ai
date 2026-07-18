@@ -14,6 +14,7 @@ class Settings(BaseSettings):
     NEO4J_URI: str = "bolt://localhost:7687"
     NEO4J_USER: str = "neo4j"
     NEO4J_PASSWORD: str = "password"
+    API_URL: str = "http://localhost:8000"
     OTEL_TRACING_ENABLED: bool = False
     OTEL_SERVICE_NAME: str = "papergraph-ai"
     OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: str = "http://localhost:4318/v1/traces"
