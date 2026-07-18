@@ -5,6 +5,8 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
     OPENALEX_API_KEY: str
+    OPENAI_API_KEY: str
+    LLM_MODEL: str = "gpt-4o-mini"
     QDRANT_URL: str = "http://localhost:6333"
     QDRANT_COLLECTION_NAME: str = "papers"
     QDRANT_VECTOR_SIZE: int = 384
