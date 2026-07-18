@@ -6,6 +6,7 @@ from app.agents.research import AgentEvent, ResearchAgent, create_research_tools
 from app.clients.openalex import OpenAlexClient
 from app.db.neo4j import get_neo4j_driver
 from app.db.qdrant import get_qdrant_client
+from app.eval.llm.models import AgentApproach
 from app.repositories.graph import GraphRepository
 from app.repositories.vector import VectorRepository
 from app.services.papers import PapersService
@@ -14,6 +15,9 @@ from app.settings import get_settings
 
 class PaperGraphAgentRunner:
     """Agent runner backed by the real PaperGraph application dependencies."""
+
+    def __init__(self, approach: AgentApproach) -> None:
+        self.approach = approach
 
     async def run(self, question: str) -> dict[str, Any]:
         """Run the PaperGraph research agent.
@@ -49,13 +53,67 @@ class PaperGraphAgentRunner:
             vector_repository=vector_repository,
             graph_repository=graph_repository,
             emit_event=events.append,
+            enabled_tools=enabled_tools_for_approach(self.approach),
         )
         agent = ResearchAgent(
             tools=tools,
             model_name=settings.LLM_MODEL,
             api_key=settings.OPENAI_API_KEY,
             emit_event=events.append,
+            system_prompt=system_prompt_for_approach(self.approach),
         )
 
         answer = await agent.run(question)
         return {"answer": answer, "events": events}
+
+
+def enabled_tools_for_approach(approach: AgentApproach) -> set[str]:
+    """Return tool names enabled for an evaluation approach.
+
+    Args:
+        approach: Agent approach to evaluate.
+
+    Returns:
+        Tool names available to the agent.
+    """
+
+    match approach:
+        case "vector_only":
+            return {"search_vector_database"}
+        case "graph_only":
+            return {"search_graph_database", "get_graph_context"}
+        case "vector_plus_graph":
+            return {"search_vector_database", "get_graph_context"}
+
+
+def system_prompt_for_approach(approach: AgentApproach) -> str:
+    """Return the system prompt for one evaluation approach.
+
+    Args:
+        approach: Agent approach to evaluate.
+
+    Returns:
+        Approach-specific agent system prompt.
+    """
+
+    shared = (
+        "You are PaperGraph AI, a research assistant for academic papers. "
+        "Answer using only tool results. When citing evidence, include paper titles and "
+        "OpenAlex IDs. Format the final answer with these sections: Summary, Key papers, "
+        "Graph insights, Evidence, and Caveats. Keep the answer concise, and state when "
+        "the available data is incomplete."
+    )
+
+    match approach:
+        case "vector_only":
+            return f"{shared} Use vector database search only. Do not request graph context."
+        case "graph_only":
+            return (
+                f"{shared} Use graph database search and graph context only. "
+                "Do not use vector search."
+            )
+        case "vector_plus_graph":
+            return (
+                f"{shared} Use vector search to find relevant papers, then inspect graph "
+                "context for the returned OpenAlex IDs."
+            )

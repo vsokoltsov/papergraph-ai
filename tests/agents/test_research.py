@@ -38,6 +38,11 @@ class FakeVectorRepository:
 
 @dataclass
 class FakeGraphRepository:
+    async def search_papers(self, query: str, limit: int = 5) -> list[dict]:
+        assert query == "graph rag"
+        assert limit == 1
+        return [{"paper": {"openalex_id": "https://openalex.org/W1", "title": "Graph RAG"}}]
+
     async def get_paper_context(self, openalex_ids: list[str]) -> list[dict]:
         assert openalex_ids == ["https://openalex.org/W1"]
         return [{"paper": {"openalex_id": "https://openalex.org/W1", "title": "Graph RAG"}}]
@@ -126,6 +131,31 @@ async def test_get_graph_context_tool_returns_context() -> None:
     assert json.loads(result) == [
         {"paper": {"openalex_id": "https://openalex.org/W1", "title": "Graph RAG"}}
     ]
+
+
+@pytest.mark.asyncio
+async def test_search_graph_database_tool_returns_matches() -> None:
+    tools, _ = _tools_by_name()
+
+    result = await tools["search_graph_database"].ainvoke({"query": "graph rag", "limit": 1})
+
+    assert json.loads(result) == [
+        {"paper": {"openalex_id": "https://openalex.org/W1", "title": "Graph RAG"}}
+    ]
+
+
+@pytest.mark.asyncio
+async def test_create_research_tools_filters_enabled_tools() -> None:
+    tools, _ = _tools_by_name()
+    filtered_tools = create_research_tools(
+        papers_service=FakePapersService(articles=[]),
+        vector_repository=FakeVectorRepository(),
+        graph_repository=FakeGraphRepository(),
+        enabled_tools={"search_vector_database"},
+    )
+
+    assert "search_graph_database" in tools
+    assert [tool.name for tool in filtered_tools] == ["search_vector_database"]
 
 
 @pytest.mark.asyncio
