@@ -8,10 +8,16 @@ import pandas as pd
 
 from app.agents.research import AgentEvent
 from app.eval.llm.judge import LangChainLLMJudge
-from app.eval.llm.models import AgentAnswerRecord, EvaluationItem, EvaluationResult
+from app.eval.llm.models import AgentAnswerRecord, AgentApproach, EvaluationItem, EvaluationResult
 from app.eval.llm.protocols import AgentRunner, LLMJudge
 from app.eval.llm.runner import PaperGraphAgentRunner
 from app.settings import get_settings
+
+EVALUATION_APPROACHES: list[AgentApproach] = [
+    "vector_only",
+    "graph_only",
+    "vector_plus_graph",
+]
 
 
 def load_dataset(path: Path) -> list[EvaluationItem]:
@@ -57,12 +63,14 @@ def extract_tool_calls(events: list[AgentEvent]) -> list[dict[str, Any]]:
 async def generate_agent_answers(
     dataset: list[EvaluationItem],
     runner: AgentRunner,
+    approach: AgentApproach,
 ) -> list[AgentAnswerRecord]:
     """Run the agent for all evaluation questions.
 
     Args:
         dataset: Ground-truth examples to answer.
         runner: Agent runner implementation.
+        approach: Agent approach being evaluated.
 
     Returns:
         Generated answers with extracted tool trajectories.
@@ -73,6 +81,7 @@ async def generate_agent_answers(
         agent_result = await runner.run(item.question)
         records.append(
             AgentAnswerRecord(
+                approach=approach,
                 question=item.question,
                 answer_agent=str(agent_result["answer"]),
                 answer_orig=item.answer_orig,
@@ -104,6 +113,7 @@ async def judge_agent_answers(
         results.append(
             EvaluationResult(
                 question=record.question,
+                approach=record.approach,
                 document=record.document,
                 answer_score=evaluation.answer_score,
                 trajectory_score=evaluation.trajectory_score,
@@ -127,7 +137,16 @@ async def run_evaluation(dataset_path: Path) -> list[EvaluationResult]:
 
     settings = get_settings()
     dataset = load_dataset(dataset_path)
-    records = await generate_agent_answers(dataset=dataset, runner=PaperGraphAgentRunner())
+    records = []
+    for approach in EVALUATION_APPROACHES:
+        records.extend(
+            await generate_agent_answers(
+                dataset=dataset,
+                runner=PaperGraphAgentRunner(approach=approach),
+                approach=approach,
+            )
+        )
+
     return await judge_agent_answers(
         records=records,
         judge=LangChainLLMJudge(model_name=settings.LLM_MODEL, api_key=settings.OPENAI_API_KEY),
@@ -147,6 +166,7 @@ def results_to_dataframe(results: list[EvaluationResult]) -> pd.DataFrame:
     return pd.DataFrame(
         [
             {
+                "approach": result.approach,
                 "question": result.question,
                 "document": result.document,
                 "answer_score": result.answer_score,
@@ -169,19 +189,28 @@ def summary_to_dataframe(results: list[EvaluationResult]) -> pd.DataFrame:
         Single-row DataFrame with answer and trajectory pass rates.
     """
 
-    total = len(results)
-    answer_good = len([result for result in results if result.answer_score == "good"])
-    trajectory_good = len([result for result in results if result.trajectory_score == "good"])
-    return pd.DataFrame(
-        [
+    rows = []
+    for approach in EVALUATION_APPROACHES:
+        approach_results = [result for result in results if result.approach == approach]
+        total = len(approach_results)
+        answer_good = len([result for result in approach_results if result.answer_score == "good"])
+        trajectory_good = len(
+            [result for result in approach_results if result.trajectory_score == "good"]
+        )
+        rows.append(
             {
+                "approach": approach,
                 "total": total,
                 "answer_good": answer_good,
                 "answer_good_rate": answer_good / total if total else 0.0,
                 "trajectory_good": trajectory_good,
                 "trajectory_good_rate": trajectory_good / total if total else 0.0,
             }
-        ]
+        )
+
+    return pd.DataFrame(rows).sort_values(
+        ["answer_good_rate", "trajectory_good_rate"],
+        ascending=False,
     )
 
 
