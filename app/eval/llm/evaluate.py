@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import sys
+from contextlib import redirect_stdout
 from pathlib import Path
 
 from app.eval.llm.utils import render_results, run_evaluation
@@ -23,7 +25,9 @@ async def main() -> None:
     )
     args = parser.parse_args()
 
-    results = await run_evaluation(dataset_path=args.dataset)
+    with redirect_stdout(sys.stderr):
+        results = await run_evaluation(dataset_path=args.dataset)
+
     print(render_results(results, output_format=args.output_format))
 
 

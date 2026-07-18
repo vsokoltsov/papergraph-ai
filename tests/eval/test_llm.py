@@ -1,11 +1,14 @@
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any, Literal
 
 import pytest
 
+from app.eval.llm import evaluate
 from app.eval.llm.judge import agent_judge_prompt
 from app.eval.llm.models import AgentAnswerRecord, AgentEvaluation, EvaluationItem, EvaluationResult
 from app.eval.llm.utils import (
+    best_result,
     extract_tool_calls,
     generate_agent_answers,
     judge_agent_answers,
@@ -137,6 +140,26 @@ def test_summary_to_dataframe_calculates_pass_rates() -> None:
     ]
 
 
+def test_best_result_uses_answer_rate_then_trajectory_rate() -> None:
+    assert (
+        best_result(
+            [
+                sample_result(
+                    approach="vector_only",
+                    answer_score="good",
+                    trajectory_score="bad",
+                ),
+                sample_result(
+                    approach="vector_plus_graph",
+                    answer_score="good",
+                    trajectory_score="good",
+                ),
+            ]
+        )["approach"]
+        == "vector_plus_graph"
+    )
+
+
 def test_results_to_dataframe_returns_detail_rows() -> None:
     dataframe = results_to_dataframe([sample_result()])
 
@@ -148,6 +171,7 @@ def test_results_to_dataframe_returns_detail_rows() -> None:
 def test_render_results_as_text() -> None:
     output = render_results([sample_result()], output_format="text")
 
+    assert "Best LLM approach: vector_only" in output
     assert "LLM Evaluation Summary" in output
     assert "answer_good_rate" in output
     assert "LLM Evaluation Details" in output
@@ -156,6 +180,7 @@ def test_render_results_as_text() -> None:
 def test_render_results_as_markdown() -> None:
     output = render_results([sample_result()], output_format="markdown")
 
+    assert "Best LLM approach: `vector_only`" in output
     assert "## LLM Evaluation Summary" in output
     assert "| approach" in output
     assert "## LLM Evaluation Details" in output
@@ -164,9 +189,38 @@ def test_render_results_as_markdown() -> None:
 def test_render_results_as_json() -> None:
     output = render_results([sample_result()], output_format="json")
 
+    assert '"best_approach": "vector_only"' in output
     assert '"summary"' in output
     assert '"results"' in output
     assert '"answer_score": "good"' in output
+    assert output.count('"approach"') == 4
+
+
+@pytest.mark.asyncio
+async def test_cli_redirects_runtime_logs_to_stderr(monkeypatch, capsys) -> None:
+    async def fake_run_evaluation(dataset_path: Path) -> list[EvaluationResult]:
+        assert dataset_path == Path("dataset.json")
+        print("runtime log")
+        return [sample_result()]
+
+    monkeypatch.setattr(evaluate, "run_evaluation", fake_run_evaluation)
+    monkeypatch.setattr(
+        "sys.argv",
+        [
+            "evaluate.py",
+            "--dataset",
+            "dataset.json",
+            "--output-format",
+            "json",
+        ],
+    )
+
+    await evaluate.main()
+
+    captured = capsys.readouterr()
+    assert "runtime log" in captured.err
+    assert "runtime log" not in captured.out
+    assert captured.out.lstrip().startswith("{")
 
 
 def sample_answer_record() -> AgentAnswerRecord:
@@ -186,11 +240,12 @@ def sample_answer_record() -> AgentAnswerRecord:
 
 
 def sample_result(
+    approach: Literal["vector_only", "graph_only", "vector_plus_graph"] = "vector_only",
     answer_score: Literal["good", "bad"] = "good",
     trajectory_score: Literal["good", "bad"] = "good",
 ) -> EvaluationResult:
     return EvaluationResult(
-        approach="vector_only",
+        approach=approach,
         question="Explain Graph RAG.",
         document="doc-1",
         answer_score=answer_score,

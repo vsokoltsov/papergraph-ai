@@ -214,6 +214,19 @@ def summary_to_dataframe(results: list[EvaluationResult]) -> pd.DataFrame:
     )
 
 
+def best_result(results: list[EvaluationResult]) -> dict[str, Any]:
+    """Select the best LLM approach by answer rate, then trajectory rate.
+
+    Args:
+        results: Evaluation results to compare.
+
+    Returns:
+        Best approach summary row.
+    """
+
+    return summary_to_dataframe(results).to_dict(orient="records")[0]
+
+
 def render_results(results: list[EvaluationResult], output_format: str = "text") -> str:
     """Render LLM evaluation results for CLI output.
 
@@ -228,6 +241,7 @@ def render_results(results: list[EvaluationResult], output_format: str = "text")
         ValueError: If output_format is unsupported.
     """
 
+    best = best_result(results)
     summary = summary_to_dataframe(results)
     details = results_to_dataframe(results)
 
@@ -235,7 +249,8 @@ def render_results(results: list[EvaluationResult], output_format: str = "text")
         case "json":
             return json.dumps(
                 {
-                    "summary": summary.to_dict(orient="records")[0],
+                    "best_approach": best["approach"],
+                    "summary": summary.to_dict(orient="records"),
                     "results": details.to_dict(orient="records"),
                 },
                 indent=2,
@@ -243,6 +258,7 @@ def render_results(results: list[EvaluationResult], output_format: str = "text")
         case "markdown":
             return "\n\n".join(
                 [
+                    f"Best LLM approach: `{best['approach']}`",
                     "## LLM Evaluation Summary",
                     summary.to_markdown(index=False, floatfmt=".3f"),
                     "## LLM Evaluation Details",
@@ -252,6 +268,7 @@ def render_results(results: list[EvaluationResult], output_format: str = "text")
         case "text":
             return "\n\n".join(
                 [
+                    f"Best LLM approach: {best['approach']}",
                     "LLM Evaluation Summary",
                     summary.to_string(index=False, float_format=lambda value: f"{value:.3f}"),
                     "LLM Evaluation Details",
