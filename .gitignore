@@ -21,7 +21,6 @@ alembic_state.db
 
 # Evaluation artifacts
 eval-results/
-app/eval/llm/llm_dataset.json
 app/eval/llm/generated_dataset.json
 app/eval/llm/ground_truth/ground_truth_dataset.json
 app/eval/llm/ground_truth/generated_dataset.json
