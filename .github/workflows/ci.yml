@@ -121,36 +121,31 @@ jobs:
 
       - name: Wait for retrieval services
         run: |
-          uv run python - <<'PY'
-          import time
+          for attempt in {1..60}; do
+            if curl --fail --silent http://localhost:6333/collections > /dev/null; then
+              break
+            fi
 
-          from neo4j import GraphDatabase
-          from qdrant_client import QdrantClient
+            if [ "$attempt" -eq 60 ]; then
+              echo "Qdrant did not become ready"
+              exit 1
+            fi
 
-          deadline = time.time() + 120
+            sleep 2
+          done
 
-          while True:
-              try:
-                  QdrantClient(url="http://localhost:6333").get_collections()
-                  break
-              except Exception:
-                  if time.time() > deadline:
-                      raise
-                  time.sleep(2)
+          for attempt in {1..60}; do
+            if docker compose exec -T neo4j cypher-shell -u neo4j -p password "RETURN 1" > /dev/null; then
+              break
+            fi
 
-          while True:
-              try:
-                  with GraphDatabase.driver(
-                      "bolt://localhost:7687",
-                      auth=("neo4j", "password"),
-                  ) as driver:
-                      driver.verify_connectivity()
-                  break
-              except Exception:
-                  if time.time() > deadline:
-                      raise
-                  time.sleep(2)
-          PY
+            if [ "$attempt" -eq 60 ]; then
+              echo "Neo4j did not become ready"
+              exit 1
+            fi
+
+            sleep 2
+          done
 
       - name: Run migrations
         run: uv run alembic upgrade head
@@ -177,4 +172,107 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: retrieval-eval
+          path: eval-results/
+
+  llm-eval:
+    name: LLM Evaluation
+    runs-on: ubuntu-latest
+    needs:
+      - test
+    continue-on-error: true
+    timeout-minutes: 30
+    env:
+      OPENALEX_API_KEY: ${{ secrets.OPENALEX_API_KEY }}
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      LOG_LEVEL: WARNING
+      QDRANT_URL: http://localhost:6333
+      QDRANT_COLLECTION_NAME: papers
+      QDRANT_VECTOR_SIZE: 384
+      NEO4J_URI: bolt://localhost:7687
+      NEO4J_USER: neo4j
+      NEO4J_PASSWORD: password
+      OTEL_TRACING_ENABLED: false
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Create empty env file for Docker Compose
+        run: touch .env
+
+      - name: Start retrieval services
+        run: docker compose up -d qdrant neo4j
+
+      - name: Wait for retrieval services
+        run: |
+          for attempt in {1..60}; do
+            if curl --fail --silent http://localhost:6333/collections > /dev/null; then
+              break
+            fi
+
+            if [ "$attempt" -eq 60 ]; then
+              echo "Qdrant did not become ready"
+              exit 1
+            fi
+
+            sleep 2
+          done
+
+          for attempt in {1..60}; do
+            if docker compose exec -T neo4j cypher-shell -u neo4j -p password "RETURN 1" > /dev/null; then
+              break
+            fi
+
+            if [ "$attempt" -eq 60 ]; then
+              echo "Neo4j did not become ready"
+              exit 1
+            fi
+
+            sleep 2
+          done
+
+      - name: Run migrations
+        run: uv run alembic upgrade head
+
+      - name: Seed evaluation databases
+        run: uv run python -m app.cli "graph rag" --limit 5
+
+      - name: Generate LLM ground truth
+        run: |
+          mkdir -p eval-results
+          uv run python -m app.eval.llm.ground_truth.evaluate \
+            --source qdrant \
+            --limit 5 \
+            --questions-per-document 1 \
+            --output eval-results/ground_truth_dataset.json
+
+      - name: Run LLM evaluation
+        run: |
+          uv run python -m app.eval.llm.evaluate \
+            --dataset eval-results/ground_truth_dataset.json \
+            --output-format markdown \
+            > eval-results/llm-eval.md
+          uv run python -m app.eval.llm.evaluate \
+            --dataset eval-results/ground_truth_dataset.json \
+            --output-format json \
+            > eval-results/llm-eval.json
+
+      - name: Add LLM evaluation summary
+        run: |
+          cat eval-results/llm-eval.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload LLM evaluation artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: llm-eval
           path: eval-results/
