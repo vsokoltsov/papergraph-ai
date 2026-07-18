@@ -1,6 +1,6 @@
 PYTHON_TARGETS = app migrations tests
 
-.PHONY: check lint format-check typecheck test backend ui fix format
+.PHONY: check lint format-check typecheck test eval-retrieval backend ui fix format
 
 check: lint format-check typecheck test
 
@@ -15,6 +15,9 @@ typecheck:
 
 test:
 	uv run pytest -q --cov=app --cov-report=term --cov-report=xml
+
+eval-retrieval:
+	uv run python -m app.eval.retrieval.evaluate
 
 backend:
 	uv run uvicorn app.api:app --reload
