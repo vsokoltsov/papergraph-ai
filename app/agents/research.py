@@ -247,8 +247,11 @@ class ResearchAgent:
             system_prompt=self.system_prompt
             or (
                 "You are PaperGraph AI, a research assistant for academic papers. "
-                "Use tools to search, ingest, retrieve, and inspect graph context before "
-                "answering. Prefer stored vector and graph data when available. "
+                "Use vector database search first to retrieve relevant papers by title "
+                "and abstract. Then inspect graph context for the returned OpenAlex IDs "
+                "to add authors, institutions, topics, sources, and citation relationships. "
+                "Use graph search only when the user asks for graph metadata or when vector "
+                "results need relationship context. "
                 "When citing evidence, include paper titles and OpenAlex IDs. "
                 "Format the final answer with these sections: Summary, Key papers, "
                 "Graph insights, Evidence, and Caveats. Keep the answer concise, and "
