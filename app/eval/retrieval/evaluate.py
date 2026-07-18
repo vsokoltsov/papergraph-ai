@@ -60,9 +60,25 @@ async def main() -> None:
         choices=["text", "markdown", "json"],
         default="text",
     )
+    parser.add_argument(
+        "--output-dir",
+        type=Path,
+        help="Write retrieval-eval.md and retrieval-eval.json from one evaluation run.",
+    )
     args = parser.parse_args()
 
     results = await run_evaluation(dataset_path=args.dataset, k=args.k)
+    if args.output_dir:
+        args.output_dir.mkdir(parents=True, exist_ok=True)
+        (args.output_dir / "retrieval-eval.md").write_text(
+            render_results(results, output_format="markdown")
+        )
+        (args.output_dir / "retrieval-eval.json").write_text(
+            render_results(results, output_format="json")
+        )
+        print(render_results(results, output_format=args.output_format))
+        return
+
     print(render_results(results, output_format=args.output_format))
 
 

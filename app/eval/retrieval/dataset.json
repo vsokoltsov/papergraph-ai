@@ -1,16 +1,74 @@
 [
   {
-    "question": "graph rag",
+    "question": "knowledge graph based retrieval augmented generation for patient portal emergency triage",
     "expected_openalex_ids": [
-      "https://openalex.org/W4399305008",
-      "https://openalex.org/W2121289117"
+      "https://openalex.org/W4409386825"
     ]
   },
   {
-    "question": "retrieval augmented generation knowledge graph",
+    "question": "global graph search for detecting emergencies in patient portal messages",
     "expected_openalex_ids": [
-      "https://openalex.org/W4399305008",
-      "https://openalex.org/W2121289117"
+      "https://openalex.org/W4409386825"
+    ]
+  },
+  {
+    "question": "Nanjing Yunjin question answering knowledge graph retrieval augmented generation",
+    "expected_openalex_ids": [
+      "https://openalex.org/W4394619840"
+    ]
+  },
+  {
+    "question": "traditional Chinese silk weaving question answering with ROBERTA vectors and knowledge graphs",
+    "expected_openalex_ids": [
+      "https://openalex.org/W4394619840"
+    ]
+  },
+  {
+    "question": "context aware knowledge graph based retrieval augmented generation for engineering standards",
+    "expected_openalex_ids": [
+      "https://openalex.org/W4416402923"
+    ]
+  },
+  {
+    "question": "engineering code technical standards graph based RAG limitations of chunk retrieval",
+    "expected_openalex_ids": [
+      "https://openalex.org/W4416402923"
+    ]
+  },
+  {
+    "question": "biomedical knowledge graph optimized prompt generation for large language models",
+    "expected_openalex_ids": [
+      "https://openalex.org/W4402567773"
+    ]
+  },
+  {
+    "question": "SPOKE biomedical knowledge graph prompt generation token reduction RAG",
+    "expected_openalex_ids": [
+      "https://openalex.org/W4402567773"
+    ]
+  },
+  {
+    "question": "Graph Retrieval-Augmented Generation survey graph based indexing graph guided retrieval graph enhanced generation",
+    "expected_openalex_ids": [
+      "https://openalex.org/W4416379250"
+    ]
+  },
+  {
+    "question": "GraphRAG survey research directions evaluation methodologies industrial use cases",
+    "expected_openalex_ids": [
+      "https://openalex.org/W4416379250"
+    ]
+  },
+  {
+    "question": "retrieval augmented language models for clinical medicine Almanac",
+    "expected_openalex_ids": [
+      "https://openalex.org/W4391221150"
+    ]
+  },
+  {
+    "question": "clinical medicine retrieval augmented language model evidence support",
+    "expected_openalex_ids": [
+      "https://openalex.org/W4391221150"
     ]
   }
 ]
