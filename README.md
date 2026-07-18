@@ -8,8 +8,8 @@
 The project uses the course-style LLM evaluation flow:
 
 1. Ingest papers into Qdrant and Neo4j.
-2. Generate ground-truth examples from the ingested paper data.
-3. Run the real PaperGraph agent for each generated question.
+2. Use the committed frozen ground-truth examples in `app/eval/llm/llm_dataset.json`.
+3. Run the real PaperGraph agent for each evaluation question.
 4. Use an LLM-as-a-judge to compare the generated agent answer with the ground-truth answer.
 5. Use the same judge to evaluate the agent trajectory, meaning the tool calls made before the final answer.
 
@@ -33,7 +33,7 @@ LLM evaluation compares three retrieval/tool-use variants:
 - `graph_only`: the agent can only use Neo4j graph search and graph context.
 - `vector_plus_graph`: the agent uses Qdrant vector search first, then Neo4j graph context for the returned OpenAlex IDs.
 
-The evaluation summary reports `answer_good_rate` and `trajectory_good_rate` per approach. The intended production approach is `vector_plus_graph`, because it combines semantic matching from Qdrant with relationship context from Neo4j.
+The evaluation summary reports `answer_good_rate` and `trajectory_good_rate` per approach. The best approach should be selected from the current evaluation output. At this stage, `vector_only` is the default baseline to beat, while `vector_plus_graph` is useful when the graph context improves the answer without adding unnecessary tool calls.
 
 ### Run Locally
 
@@ -47,31 +47,40 @@ uv run alembic upgrade head
 Ingest papers:
 
 ```bash
-uv run python -m app.cli "graph rag" --limit 5
+uv run python -m app.cli "knowledge graph based retrieval augmented generation" --limit 10
 ```
 
-Generate ground truth from the ingested Qdrant data:
+Run LLM evaluation from the committed frozen dataset:
+
+```bash
+uv run python -m app.eval.llm.evaluate \
+  --dataset app/eval/llm/llm_dataset.json \
+  --output-format markdown
+```
+
+Write Markdown and JSON artifacts from the same evaluator run:
+
+```bash
+uv run python -m app.eval.llm.evaluate \
+  --dataset app/eval/llm/llm_dataset.json \
+  --output-format markdown \
+  --output-dir eval-results
+```
+
+To regenerate candidate ground-truth data locally, ingest the focused query first and then run:
 
 ```bash
 uv run python -m app.eval.llm.ground_truth.evaluate \
   --source qdrant \
-  --limit 5 \
+  --limit 10 \
   --questions-per-document 1 \
-  --output app/eval/llm/ground_truth/ground_truth_dataset.json
+  --output app/eval/llm/generated_dataset.json
 ```
 
-Run LLM evaluation:
-
-```bash
-uv run python -m app.eval.llm.evaluate \
-  --dataset app/eval/llm/ground_truth/ground_truth_dataset.json \
-  --output-format markdown
-```
-
-Generated datasets and evaluation outputs are ignored by Git. The committed `dataset.json` files are small seed examples; generated files depend on current database contents and model responses.
+Generated datasets and evaluation outputs are ignored by Git. The committed LLM dataset is intentionally frozen so CI runs can be compared across builds. If a regenerated dataset is better, review it manually before replacing `app/eval/llm/llm_dataset.json`.
 
 ### CI
 
-GitHub Actions runs an `llm-eval` job after tests. The job starts Qdrant and Neo4j, runs migrations, ingests a small batch of papers, generates ground truth, runs the LLM judge, writes the markdown summary to the Actions summary, and uploads JSON/markdown artifacts.
+GitHub Actions runs an `llm-eval` job after tests. The job starts Qdrant and Neo4j, runs migrations, ingests a focused batch of Graph RAG papers, runs the LLM judge against the frozen dataset, writes the markdown summary to the Actions summary, and uploads JSON/markdown artifacts generated from the same evaluator run.
 
 The job is marked `continue-on-error` because it depends on external services and API keys. This keeps normal CI useful while still producing evaluation artifacts when the environment is available.
