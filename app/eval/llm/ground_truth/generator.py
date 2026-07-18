@@ -59,11 +59,17 @@ def ground_truth_instructions() -> str:
     return """
 You generate evaluation datasets for an academic-paper research assistant.
 
-Generate questions that a user could realistically ask after ingesting the provided paper.
+Generate questions that a user could realistically ask after ingesting the provided paper
+for a project about knowledge-graph-enhanced retrieval augmented generation with LLMs.
 Generate answers using only the provided title and abstract.
 
 Rules:
 - Do not invent facts that are not in the source document.
+- Prefer questions about knowledge graphs, graph-based retrieval, retrieval augmented
+  generation, LLM factuality, provenance, domain adaptation, evaluation methods,
+  and research limitations.
+- If the paper uses the acronym RAG for something other than retrieval augmented
+  generation, do not generate questions about it.
 - Questions should test semantic understanding, not exact title lookup.
 - Answers should be concise but complete enough to serve as ground truth.
 - Include important paper-specific details when they are available.
