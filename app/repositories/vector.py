@@ -14,7 +14,7 @@ class VectorRepository:
     db: AsyncQdrantClient
     collection_name: str
 
-    @tracer.start_as_current_span("qdrant.upload_papers")
+    @tracer.start_as_current_span("vector.upload_papers")
     def upload_papers(
         self,
         ids: Sequence[str],
