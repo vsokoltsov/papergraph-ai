@@ -16,6 +16,18 @@ services:
       - neo4j
       - tempo
 
+  ui:
+    build:
+      context: .
+      dockerfile: Dockerfile.ui
+    container_name: papergraph-ui
+    ports:
+      - "8501:8501"
+    environment:
+      API_URL: http://api:8000
+    depends_on:
+      - api
+
   qdrant:
     image: qdrant/qdrant:latest
     container_name: papergraph-qdrant
