@@ -4,7 +4,7 @@ from typing import Any
 
 import pytest
 
-from app.eval.llm.ground_truth.generator import ground_truth_prompt
+from app.eval.llm.ground_truth.generator import ground_truth_instructions, ground_truth_prompt
 from app.eval.llm.ground_truth.models import GeneratedQuestion, SourceDocument
 from app.eval.llm.ground_truth.utils import (
     document_from_payload,
@@ -51,6 +51,14 @@ def test_ground_truth_prompt_contains_document_fields() -> None:
     assert "Generate 2 evaluation question-answer pairs." in prompt
     assert "https://openalex.org/W1" in prompt
     assert "Graph RAG" in prompt
+
+
+def test_ground_truth_instructions_focus_on_knowledge_graph_rag() -> None:
+    instructions = ground_truth_instructions()
+
+    assert "knowledge-graph-enhanced retrieval augmented generation" in instructions
+    assert "other than" in instructions
+    assert "retrieval augmented generation" in instructions
 
 
 def test_load_documents_from_json(tmp_path: Path) -> None:

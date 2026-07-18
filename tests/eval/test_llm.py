@@ -223,6 +223,43 @@ async def test_cli_redirects_runtime_logs_to_stderr(monkeypatch, capsys) -> None
     assert captured.out.lstrip().startswith("{")
 
 
+@pytest.mark.asyncio
+async def test_cli_writes_markdown_and_json_from_one_run(
+    monkeypatch,
+    tmp_path: Path,
+    capsys,
+) -> None:
+    calls = 0
+
+    async def fake_run_evaluation(dataset_path: Path) -> list[EvaluationResult]:
+        nonlocal calls
+        calls += 1
+        assert dataset_path == Path("dataset.json")
+        return [sample_result()]
+
+    monkeypatch.setattr(evaluate, "run_evaluation", fake_run_evaluation)
+    monkeypatch.setattr(
+        "sys.argv",
+        [
+            "evaluate.py",
+            "--dataset",
+            "dataset.json",
+            "--output-format",
+            "markdown",
+            "--output-dir",
+            str(tmp_path),
+        ],
+    )
+
+    await evaluate.main()
+
+    captured = capsys.readouterr()
+    assert calls == 1
+    assert "Best LLM approach: `vector_only`" in captured.out
+    assert "Best LLM approach: `vector_only`" in (tmp_path / "llm-eval.md").read_text()
+    assert '"best_approach": "vector_only"' in (tmp_path / "llm-eval.json").read_text()
+
+
 def sample_answer_record() -> AgentAnswerRecord:
     return AgentAnswerRecord(
         approach="vector_only",

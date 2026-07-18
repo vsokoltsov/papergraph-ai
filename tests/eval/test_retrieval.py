@@ -3,6 +3,7 @@ from typing import Any
 
 import pytest
 
+from app.eval.retrieval import evaluate
 from app.eval.retrieval.evaluate import (
     EvaluationItem,
     EvaluationResult,
@@ -169,6 +170,46 @@ def test_render_results_as_json() -> None:
 
     assert '"best_approach": "fake"' in output
     assert '"approach":"fake"' in output.replace(" ", "")
+
+
+@pytest.mark.asyncio
+async def test_cli_writes_markdown_and_json_from_one_run(
+    monkeypatch,
+    tmp_path,
+    capsys,
+) -> None:
+    calls = 0
+
+    async def fake_run_evaluation(dataset_path, k):
+        nonlocal calls
+        calls += 1
+        assert dataset_path.name == "dataset.json"
+        assert k == 5
+        return [sample_result()]
+
+    monkeypatch.setattr(evaluate, "run_evaluation", fake_run_evaluation)
+    monkeypatch.setattr(
+        "sys.argv",
+        [
+            "evaluate.py",
+            "--dataset",
+            "dataset.json",
+            "--k",
+            "5",
+            "--output-format",
+            "markdown",
+            "--output-dir",
+            str(tmp_path),
+        ],
+    )
+
+    await evaluate.main()
+
+    captured = capsys.readouterr()
+    assert calls == 1
+    assert "Best retrieval approach: `fake`" in captured.out
+    assert "Best retrieval approach: `fake`" in (tmp_path / "retrieval-eval.md").read_text()
+    assert '"best_approach": "fake"' in (tmp_path / "retrieval-eval.json").read_text()
 
 
 def sample_result(approach: str = "fake", mrr_at_k: float = 1) -> EvaluationResult:
