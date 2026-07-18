@@ -21,7 +21,7 @@
     ]
   },
   {
-    "question": "Which publication compares local graph retrieval with broader community based graph retrieval?",
+    "question": "Which publication compares neighborhood-level retrieval with community-level retrieval over a medical knowledge graph?",
     "expected_openalex_ids": [
       "https://openalex.org/W4409386825"
     ]
@@ -34,7 +34,7 @@
     ]
   },
   {
-    "question": "Which paper applies graph augmented question answering to cultural heritage or traditional craft knowledge?",
+    "question": "Which paper applies retrieval augmented question answering to cultural heritage or traditional craft knowledge?",
     "expected_openalex_ids": [
       "https://openalex.org/W4394619840"
     ]
@@ -53,7 +53,7 @@
     ]
   },
   {
-    "question": "Which biomedical KG-RAG paper focuses on pruning graph context to lower prompt cost?",
+    "question": "Which biomedical paper focuses on selecting smaller evidence context to lower prompt cost?",
     "expected_openalex_ids": [
       "https://openalex.org/W4402567773"
     ]
@@ -72,7 +72,7 @@
     ]
   },
   {
-    "question": "Find the survey paper that reviews GraphRAG downstream tasks evaluation methods and industrial use cases.",
+    "question": "Find the survey paper that reviews graph retrieval augmented generation tasks evaluation methods and industrial use cases.",
     "expected_openalex_ids": [
       "https://openalex.org/W4416379250"
     ]

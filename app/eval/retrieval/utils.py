@@ -21,6 +21,13 @@ from app.repositories.graph import GraphRepository
 from app.repositories.vector import VectorRepository
 from app.settings import get_settings
 
+RETRIEVAL_APPROACHES = [
+    "openalex_keyword",
+    "qdrant_vector",
+    "neo4j_graph",
+    "qdrant_vector_plus_graph",
+]
+
 
 def load_dataset(path: Path) -> list[EvaluationItem]:
     """Load retrieval evaluation examples from a JSON file.
@@ -148,12 +155,17 @@ async def evaluate_retriever(
     )
 
 
-async def run_evaluation(dataset_path: Path, k: int) -> list[EvaluationResult]:
+async def run_evaluation(
+    dataset_path: Path,
+    k: int,
+    approaches: list[str] | None = None,
+) -> list[EvaluationResult]:
     """Run all configured retrieval evaluations.
 
     Args:
         dataset_path: Path to the retrieval evaluation dataset.
         k: Number of top retrieved items to score.
+        approaches: Retrieval approach names to evaluate. Defaults to all approaches.
 
     Returns:
         Aggregated metrics for each retrieval approach.
@@ -161,6 +173,7 @@ async def run_evaluation(dataset_path: Path, k: int) -> list[EvaluationResult]:
 
     settings = get_settings()
     dataset = load_dataset(dataset_path)
+    selected_approaches = approaches or RETRIEVAL_APPROACHES
     openalex_client = OpenAlexClient(api_key=settings.OPENALEX_API_KEY)
     vector_repository = VectorRepository(
         db=get_qdrant_client(url=settings.QDRANT_URL),
@@ -173,34 +186,24 @@ async def run_evaluation(dataset_path: Path, k: int) -> list[EvaluationResult]:
     )
     graph_repository = GraphRepository(db=graph_driver)
 
+    configured_retrievers = {
+        "openalex_keyword": openalex_keyword_retriever(openalex_client),
+        "qdrant_vector": qdrant_vector_retriever(vector_repository),
+        "neo4j_graph": graph_keyword_retriever(graph_repository),
+        "qdrant_vector_plus_graph": qdrant_vector_plus_graph_retriever(
+            vector_repository=vector_repository,
+            graph_repository=graph_repository,
+        ),
+    }
+
     return [
         await evaluate_retriever(
-            approach="openalex_keyword",
+            approach=approach,
             dataset=dataset,
-            retriever=openalex_keyword_retriever(openalex_client),
+            retriever=configured_retrievers[approach],
             k=k,
-        ),
-        await evaluate_retriever(
-            approach="qdrant_vector",
-            dataset=dataset,
-            retriever=qdrant_vector_retriever(vector_repository),
-            k=k,
-        ),
-        await evaluate_retriever(
-            approach="neo4j_graph",
-            dataset=dataset,
-            retriever=graph_keyword_retriever(graph_repository),
-            k=k,
-        ),
-        await evaluate_retriever(
-            approach="qdrant_vector_plus_graph",
-            dataset=dataset,
-            retriever=qdrant_vector_plus_graph_retriever(
-                vector_repository=vector_repository,
-                graph_repository=graph_repository,
-            ),
-            k=k,
-        ),
+        )
+        for approach in selected_approaches
     ]
 
 

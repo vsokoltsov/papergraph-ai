@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+import httpx
 import pytest
 
 from app.eval.retrieval import evaluate
@@ -16,6 +17,7 @@ from app.eval.retrieval.evaluate import (
     graph_keyword_retriever,
     load_dataset,
     normalize_openalex_id,
+    openalex_keyword_retriever,
     qdrant_vector_plus_graph_retriever,
     relevance_list,
     render_results,
@@ -69,6 +71,13 @@ def test_committed_dataset_contains_paraphrase_and_multi_document_queries() -> N
     assert any(
         "connected to clinical or biomedical applications" in item.question for item in dataset
     )
+
+
+@pytest.mark.asyncio
+async def test_openalex_keyword_retriever_returns_empty_list_on_http_error() -> None:
+    retriever = openalex_keyword_retriever(FakeFailingOpenAlexClient())
+
+    assert await retriever("question text", 5) == []
 
 
 @pytest.mark.asyncio
@@ -198,11 +207,12 @@ async def test_cli_writes_markdown_and_json_from_one_run(
 ) -> None:
     calls = 0
 
-    async def fake_run_evaluation(dataset_path, k):
+    async def fake_run_evaluation(dataset_path, k, approaches):
         nonlocal calls
         calls += 1
         assert dataset_path.name == "dataset.json"
         assert k == 5
+        assert approaches == ["qdrant_vector", "neo4j_graph"]
         return [sample_result()]
 
     monkeypatch.setattr(evaluate, "run_evaluation", fake_run_evaluation)
@@ -216,6 +226,9 @@ async def test_cli_writes_markdown_and_json_from_one_run(
             "5",
             "--output-format",
             "markdown",
+            "--approaches",
+            "qdrant_vector",
+            "neo4j_graph",
             "--output-dir",
             str(tmp_path),
         ],
@@ -277,3 +290,11 @@ class FakeGraphRepository:
     async def get_paper_context(self, openalex_ids: list[str]) -> list[dict]:
         assert openalex_ids == ["https://openalex.org/W1"]
         return [{"references": [{"openalex_id": "https://openalex.org/W2"}]}]
+
+
+@dataclass
+class FakeFailingOpenAlexClient:
+    async def get_articles(self, query: str, limit: int = 20) -> list[Any]:
+        request = httpx.Request("GET", "https://api.openalex.org/works")
+        response = httpx.Response(400, request=request)
+        raise httpx.HTTPStatusError("bad request", request=request, response=response)

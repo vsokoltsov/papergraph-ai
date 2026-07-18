@@ -35,7 +35,6 @@ async def test_upsert_articles_graph_stores_nodes_relationships_and_is_idempoten
         id="https://openalex.org/W1",
         doi="https://doi.org/10.123/test",
         title="Graph RAG",
-        abstract_inverted_index={"Graph": [0], "retrieval": [1]},
         publication_year=2024,
         publication_date="2024-01-01",
         language="en",
@@ -95,7 +94,6 @@ async def test_upsert_articles_graph_stores_nodes_relationships_and_is_idempoten
             MATCH (p:Paper {openalex_id: $paper_id})
             RETURN
                 p.title AS title,
-                p.abstract AS abstract,
                 p.doi AS doi,
                 p.publication_year AS publication_year,
                 p.cited_by_count AS cited_by_count,
@@ -116,7 +114,6 @@ async def test_upsert_articles_graph_stores_nodes_relationships_and_is_idempoten
     await driver.close()
 
     assert row["title"] == "Graph RAG"
-    assert row["abstract"] == "Graph retrieval"
     assert row["doi"] == "https://doi.org/10.123/test"
     assert row["publication_year"] == 2024
     assert row["cited_by_count"] == 7
@@ -132,7 +129,6 @@ async def test_upsert_articles_graph_stores_nodes_relationships_and_is_idempoten
                 "openalex_id": "https://openalex.org/W1",
                 "doi": "https://doi.org/10.123/test",
                 "title": "Graph RAG",
-                "abstract": "Graph retrieval",
                 "publication_year": 2024,
                 "publication_date": "2024-01-01",
                 "language": "en",
@@ -195,7 +191,6 @@ async def test_upsert_articles_graph_stores_nodes_relationships_and_is_idempoten
                 "openalex_id": "https://openalex.org/W1",
                 "doi": "https://doi.org/10.123/test",
                 "title": "Graph RAG",
-                "abstract": "Graph retrieval",
                 "publication_year": 2024,
                 "publication_date": "2024-01-01",
                 "language": "en",

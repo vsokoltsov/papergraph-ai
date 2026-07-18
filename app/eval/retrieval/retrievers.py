@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import httpx
+
 from app.eval.retrieval.ids import normalize_openalex_id
 from app.eval.retrieval.protocols import (
     ArticleSearchClient,
@@ -22,7 +24,11 @@ def openalex_keyword_retriever(client: ArticleSearchClient) -> Retriever:
     async def retrieve(question: str, k: int) -> list[str]:
         """Retrieve OpenAlex IDs from OpenAlex keyword search."""
 
-        articles = await client.get_articles(query=question, limit=k)
+        try:
+            articles = await client.get_articles(query=question, limit=k)
+        except httpx.HTTPError:
+            return []
+
         return [normalize_openalex_id(article.id) for article in articles]
 
     return retrieve

@@ -13,6 +13,7 @@ from app.eval.retrieval.retrievers import (
     qdrant_vector_retriever,
 )
 from app.eval.retrieval.utils import (
+    RETRIEVAL_APPROACHES,
     best_result,
     calculate_metrics,
     details_to_dataframe,
@@ -28,6 +29,7 @@ __all__ = [
     "EvaluationItem",
     "EvaluationResult",
     "QueryEvaluationResult",
+    "RETRIEVAL_APPROACHES",
     "best_result",
     "calculate_metrics",
     "details_to_dataframe",
@@ -65,9 +67,20 @@ async def main() -> None:
         type=Path,
         help="Write retrieval-eval.md and retrieval-eval.json from one evaluation run.",
     )
+    parser.add_argument(
+        "--approaches",
+        nargs="+",
+        choices=RETRIEVAL_APPROACHES,
+        default=None,
+        help="Retrieval approaches to evaluate. Defaults to all approaches.",
+    )
     args = parser.parse_args()
 
-    results = await run_evaluation(dataset_path=args.dataset, k=args.k)
+    results = await run_evaluation(
+        dataset_path=args.dataset,
+        k=args.k,
+        approaches=args.approaches,
+    )
     if args.output_dir:
         args.output_dir.mkdir(parents=True, exist_ok=True)
         (args.output_dir / "retrieval-eval.md").write_text(
