@@ -25,6 +25,10 @@ class PaperVectorRepository(Protocol):
     ) -> None: ...
 
 
+class PaperGraphRepository(Protocol):
+    async def upsert_articles_graph(self, articles) -> None: ...
+
+
 def restore_abstract(index):
     if not index:
         return None
@@ -41,13 +45,14 @@ def restore_abstract(index):
 class PapersService:
     openalex_client: OpenAlexArticlesClient
     vector_repository: PaperVectorRepository
+    graph_repository: PaperGraphRepository
 
     @tracer.start_as_current_span("papers.get_articles")
     async def get_articles(self, query: str, limit: int = 20) -> list[OpenAlexArticle]:
         return await self.openalex_client.get_articles(query=query, limit=limit)
 
     @tracer.start_as_current_span("papers.insert_articles")
-    def insert_articles(self, articles: list[OpenAlexArticle]) -> None:
+    async def insert_articles(self, articles: list[OpenAlexArticle]) -> None:
         ids = []
         vectors = []
         payloads = []
@@ -79,3 +84,4 @@ class PapersService:
             vectors=vectors,
             payload=payloads,
         )
+        await self.graph_repository.upsert_articles_graph(articles=articles)
