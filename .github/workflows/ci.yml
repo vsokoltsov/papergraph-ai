@@ -153,17 +153,13 @@ jobs:
         run: uv run alembic upgrade head
 
       - name: Seed retrieval databases
-        run: uv run python -m app.cli "graph rag" --limit 10
+        run: uv run python -m app.cli "knowledge graph based retrieval augmented generation" --limit 10
 
       - name: Run retrieval evaluation
         run: |
-          mkdir -p eval-results
           uv run python -m app.eval.retrieval.evaluate \
             --output-format markdown \
-            > eval-results/retrieval-eval.md
-          uv run python -m app.eval.retrieval.evaluate \
-            --output-format json \
-            > eval-results/retrieval-eval.json
+            --output-dir eval-results
 
       - name: Add evaluation summary
         run: |
@@ -249,27 +245,14 @@ jobs:
         run: uv run alembic upgrade head
 
       - name: Seed evaluation databases
-        run: uv run python -m app.cli "graph rag" --limit 5
-
-      - name: Generate LLM ground truth
-        run: |
-          mkdir -p eval-results
-          uv run python -m app.eval.llm.ground_truth.evaluate \
-            --source qdrant \
-            --limit 5 \
-            --questions-per-document 1 \
-            --output eval-results/ground_truth_dataset.json
+        run: uv run python -m app.cli "knowledge graph based retrieval augmented generation" --limit 10
 
       - name: Run LLM evaluation
         run: |
           uv run python -m app.eval.llm.evaluate \
-            --dataset eval-results/ground_truth_dataset.json \
+            --dataset app/eval/llm/llm_dataset.json \
             --output-format markdown \
-            > eval-results/llm-eval.md
-          uv run python -m app.eval.llm.evaluate \
-            --dataset eval-results/ground_truth_dataset.json \
-            --output-format json \
-            > eval-results/llm-eval.json
+            --output-dir eval-results
 
       - name: Add LLM evaluation summary
         run: |
