@@ -14,7 +14,7 @@ typecheck:
 	uv run ty check $(PYTHON_TARGETS)
 
 test:
-	uv run pytest -q
+	uv run pytest -q --cov=app --cov-report=term --cov-report=xml
 
 fix:
 	uv run ruff check $(PYTHON_TARGETS) --fix
