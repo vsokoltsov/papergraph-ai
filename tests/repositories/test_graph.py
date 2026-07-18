@@ -85,6 +85,7 @@ async def test_upsert_articles_graph_stores_nodes_relationships_and_is_idempoten
 
     await repository.upsert_articles_graph([article])
     await repository.upsert_articles_graph([article])
+    contexts = await repository.get_paper_context([article.id])
 
     async with driver.session() as session:
         result = await session.run(
@@ -121,3 +122,65 @@ async def test_upsert_articles_graph_stores_nodes_relationships_and_is_idempoten
     assert row["topics"] == 1
     assert row["primary_topics"] == 1
     assert row["references"] == 1
+    assert contexts == [
+        {
+            "paper": {
+                "openalex_id": "https://openalex.org/W1",
+                "doi": "https://doi.org/10.123/test",
+                "title": "Graph RAG",
+                "publication_year": 2024,
+                "publication_date": "2024-01-01",
+                "language": "en",
+                "type": "article",
+                "cited_by_count": 7,
+            },
+            "authors": [
+                {
+                    "openalex_id": "https://openalex.org/A1",
+                    "display_name": "Ada Lovelace",
+                    "orcid": "https://orcid.org/0000-0001",
+                    "author_position": "first",
+                    "is_corresponding": True,
+                }
+            ],
+            "institutions": [
+                {
+                    "openalex_id": "https://openalex.org/I1",
+                    "display_name": "Graph University",
+                    "ror": "https://ror.org/123",
+                    "country_code": "US",
+                    "type": "education",
+                }
+            ],
+            "sources": [
+                {
+                    "openalex_id": "https://openalex.org/S1",
+                    "display_name": "Journal of Graphs",
+                    "type": "journal",
+                    "issn_l": "1234-5678",
+                    "host_organization": "https://openalex.org/P1",
+                }
+            ],
+            "topics": [
+                {
+                    "openalex_id": "https://openalex.org/T1",
+                    "display_name": "Retrieval Augmented Generation",
+                    "score": 0.95,
+                }
+            ],
+            "primary_topics": [
+                {
+                    "openalex_id": "https://openalex.org/T1",
+                    "display_name": "Retrieval Augmented Generation",
+                }
+            ],
+            "references": [
+                {
+                    "openalex_id": "https://openalex.org/W2",
+                    "doi": None,
+                    "title": None,
+                    "publication_year": None,
+                }
+            ],
+        }
+    ]

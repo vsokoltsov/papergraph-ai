@@ -454,6 +454,86 @@ class GraphRepository:
             reference_rows,
         )
 
+    @tracer.start_as_current_span("graph.get_paper_context")
+    async def get_paper_context(self, openalex_ids: list[str]) -> list[dict]:
+        if not openalex_ids:
+            return []
+
+        async with self.db.session() as session:
+            result = await session.run(
+                """
+                MATCH (p:Paper)
+                WHERE p.openalex_id IN $openalex_ids
+                RETURN
+                    p {
+                        .openalex_id,
+                        .doi,
+                        .title,
+                        .publication_year,
+                        .publication_date,
+                        .language,
+                        .type,
+                        .cited_by_count
+                    } AS paper,
+                    [
+                        (a:Author)-[w:WROTE]->(p) |
+                        a {
+                            .openalex_id,
+                            .display_name,
+                            .orcid,
+                            author_position: w.author_position,
+                            is_corresponding: w.is_corresponding
+                        }
+                    ] AS authors,
+                    [
+                        (i:Institution)-[:CONTRIBUTED_TO]->(p) |
+                        i {
+                            .openalex_id,
+                            .display_name,
+                            .ror,
+                            .country_code,
+                            .type
+                        }
+                    ] AS institutions,
+                    [
+                        (p)-[:PUBLISHED_IN]->(s:Source) |
+                        s {
+                            .openalex_id,
+                            .display_name,
+                            .type,
+                            .issn_l,
+                            .host_organization
+                        }
+                    ] AS sources,
+                    [
+                        (p)-[r:HAS_TOPIC]->(t:Topic) |
+                        t {
+                            .openalex_id,
+                            .display_name,
+                            score: r.score
+                        }
+                    ] AS topics,
+                    [
+                        (p)-[:PRIMARY_TOPIC]->(primary_topic:Topic) |
+                        primary_topic {
+                            .openalex_id,
+                            .display_name
+                        }
+                    ] AS primary_topics,
+                    [
+                        (p)-[:CITES]->(referenced_paper:Paper) |
+                        referenced_paper {
+                            .openalex_id,
+                            .doi,
+                            .title,
+                            .publication_year
+                        }
+                    ] AS references
+                """,
+                openalex_ids=openalex_ids,
+            )
+            return await result.data()
+
     @tracer.start_as_current_span("graph.run_bulk")
     async def _run_bulk(self, query: LiteralString, rows: list[dict]) -> None:
         if not rows:

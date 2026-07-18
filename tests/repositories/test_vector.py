@@ -51,3 +51,38 @@ async def test_upload_papers_stores_vectors_and_payload(qdrant_url: str) -> None
     }
     assert isinstance(points[0].vector, list)
     assert len(points[0].vector) == 4
+
+
+@pytest.mark.asyncio
+async def test_search_papers_returns_matching_payloads(qdrant_url: str) -> None:
+    collection_name = "test_paper_search"
+    client = AsyncQdrantClient(url=qdrant_url)
+    await client.create_collection(
+        collection_name=collection_name,
+        vectors_config=VectorParams(size=4, distance=Distance.COSINE),
+    )
+    repository = VectorRepository(db=client, collection_name=collection_name)
+
+    repository.upload_papers(
+        ids=[
+            "00000000-0000-0000-0000-000000000001",
+            "00000000-0000-0000-0000-000000000002",
+        ],
+        vectors=[
+            [1.0, 0.0, 0.0, 0.0],
+            [0.0, 1.0, 0.0, 0.0],
+        ],
+        payload=[
+            {"openalex_id": "https://openalex.org/W1", "title": "Graph RAG"},
+            {"openalex_id": "https://openalex.org/W2", "title": "Other Paper"},
+        ],
+    )
+
+    results = await repository.search_papers(query=[1.0, 0.0, 0.0, 0.0], limit=1)
+
+    assert len(results) == 1
+    assert results[0]["payload"] == {
+        "openalex_id": "https://openalex.org/W1",
+        "title": "Graph RAG",
+    }
+    assert results[0]["score"] > 0
