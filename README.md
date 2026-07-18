@@ -52,7 +52,17 @@ Ingest papers:
 uv run python -m app.cli "knowledge graph based retrieval augmented generation" --limit 10
 ```
 
-Run LLM evaluation from the committed frozen dataset:
+Run the cheap LLM smoke evaluation from the committed frozen dataset:
+
+```bash
+uv run python -m app.eval.llm.evaluate \
+  --dataset app/eval/llm/llm_dataset.json \
+  --output-format markdown \
+  --limit 2 \
+  --approaches vector_only vector_plus_graph
+```
+
+Run the full LLM evaluation locally when you need benchmark numbers:
 
 ```bash
 uv run python -m app.eval.llm.evaluate \
@@ -84,5 +94,7 @@ Generated datasets and evaluation outputs are ignored by Git. The committed LLM 
 ### CI
 
 GitHub Actions runs an `llm-eval` job after tests. The job starts Qdrant and Neo4j, runs migrations, ingests a focused batch of Graph RAG papers, runs the LLM judge against the frozen dataset, writes the markdown summary to the Actions summary, and uploads JSON/markdown artifacts generated from the same evaluator run.
+
+Push and pull-request builds run only the smoke LLM evaluation: two questions and the `vector_only` / `vector_plus_graph` approaches. Use the manual `workflow_dispatch` run with `llm_eval_mode=full` for the complete LLM benchmark.
 
 The job is marked `continue-on-error` because it depends on external services and API keys. This keeps normal CI useful while still producing evaluation artifacts when the environment is available.
