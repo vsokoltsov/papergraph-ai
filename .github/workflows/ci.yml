@@ -81,3 +81,100 @@ jobs:
           files: ./coverage.xml
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
+  retrieval-eval:
+    name: Retrieval Evaluation
+    runs-on: ubuntu-latest
+    needs:
+      - test
+    continue-on-error: true
+    timeout-minutes: 20
+    env:
+      OPENALEX_API_KEY: ${{ secrets.OPENALEX_API_KEY }}
+      LOG_LEVEL: WARNING
+      QDRANT_URL: http://localhost:6333
+      QDRANT_COLLECTION_NAME: papers
+      QDRANT_VECTOR_SIZE: 384
+      NEO4J_URI: bolt://localhost:7687
+      NEO4J_USER: neo4j
+      NEO4J_PASSWORD: password
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Create empty env file for Docker Compose
+        run: touch .env
+
+      - name: Start retrieval services
+        run: docker compose up -d qdrant neo4j
+
+      - name: Wait for retrieval services
+        run: |
+          uv run python - <<'PY'
+          import time
+
+          from neo4j import GraphDatabase
+          from qdrant_client import QdrantClient
+
+          deadline = time.time() + 120
+
+          while True:
+              try:
+                  QdrantClient(url="http://localhost:6333").get_collections()
+                  break
+              except Exception:
+                  if time.time() > deadline:
+                      raise
+                  time.sleep(2)
+
+          while True:
+              try:
+                  with GraphDatabase.driver(
+                      "bolt://localhost:7687",
+                      auth=("neo4j", "password"),
+                  ) as driver:
+                      driver.verify_connectivity()
+                  break
+              except Exception:
+                  if time.time() > deadline:
+                      raise
+                  time.sleep(2)
+          PY
+
+      - name: Run migrations
+        run: uv run alembic upgrade head
+
+      - name: Seed retrieval databases
+        run: uv run python -m app.cli "graph rag" --limit 10
+
+      - name: Run retrieval evaluation
+        run: |
+          mkdir -p eval-results
+          uv run python -m app.eval.retrieval.evaluate \
+            --output-format markdown \
+            > eval-results/retrieval-eval.md
+          uv run python -m app.eval.retrieval.evaluate \
+            --output-format json \
+            > eval-results/retrieval-eval.json
+
+      - name: Add evaluation summary
+        run: |
+          echo "## Retrieval Evaluation" >> "$GITHUB_STEP_SUMMARY"
+          cat eval-results/retrieval-eval.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload retrieval evaluation artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: retrieval-eval
+          path: eval-results/
