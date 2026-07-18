@@ -534,6 +534,44 @@ class GraphRepository:
             )
             return await result.data()
 
+    @tracer.start_as_current_span("graph.search_papers")
+    async def search_papers(self, query: str, limit: int = 5) -> list[dict]:
+        async with self.db.session() as session:
+            result = await session.run(
+                """
+                WITH toLower($search_query) AS search_query
+                MATCH (p:Paper)
+                OPTIONAL MATCH (p)-[:HAS_TOPIC|PRIMARY_TOPIC]->(t:Topic)
+                OPTIONAL MATCH (p)-[:PUBLISHED_IN]->(s:Source)
+                WITH p, collect(DISTINCT t.display_name) AS topics,
+                     collect(DISTINCT s.display_name) AS sources, search_query
+                WHERE toLower(coalesce(p.title, "")) CONTAINS search_query
+                   OR any(topic IN topics WHERE toLower(coalesce(topic, "")) CONTAINS search_query)
+                   OR any(
+                       source IN sources
+                       WHERE toLower(coalesce(source, "")) CONTAINS search_query
+                   )
+                RETURN
+                    p {
+                        .openalex_id,
+                        .doi,
+                        .title,
+                        .publication_year,
+                        .publication_date,
+                        .language,
+                        .type,
+                        .cited_by_count
+                    } AS paper,
+                    topics,
+                    sources
+                ORDER BY coalesce(p.cited_by_count, 0) DESC
+                LIMIT $limit
+                """,
+                search_query=query.lower(),
+                limit=limit,
+            )
+            return await result.data()
+
     @tracer.start_as_current_span("graph.run_bulk")
     async def _run_bulk(self, query: LiteralString, rows: list[dict]) -> None:
         if not rows:
