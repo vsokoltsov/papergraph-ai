@@ -32,6 +32,8 @@ class PaperVectorRepository(Protocol):
 
 
 class PaperGraphRepository(Protocol):
+    async def search_papers(self, query: str, limit: int = 5) -> list[dict]: ...
+
     async def get_paper_context(self, openalex_ids: list[str]) -> list[dict]: ...
 
 
@@ -95,7 +97,11 @@ def create_research_tools(
     vector_repository: PaperVectorRepository,
     graph_repository: PaperGraphRepository,
     emit_event: Callable[[AgentEvent], None] | None = None,
+    enabled_tools: set[str] | None = None,
 ) -> list[BaseTool]:
+    def is_enabled(tool_name: str) -> bool:
+        return enabled_tools is None or tool_name in enabled_tools
+
     async def search_openalex(query: str, limit: int = 5) -> str:
         """Search OpenAlex for papers and return short metadata previews."""
         _emit_tool_event(
@@ -165,6 +171,27 @@ def create_research_tools(
         )
         return _to_json(results)
 
+    async def search_graph_database(query: str, limit: int = 5) -> str:
+        """Search stored paper metadata, topics, and sources in the graph database."""
+        _emit_tool_event(
+            emit_event,
+            {
+                "type": "tool_start",
+                "tool": "search_graph_database",
+                "input": {"query": query, "limit": limit},
+            },
+        )
+        results = await graph_repository.search_papers(query=query, limit=limit)
+        _emit_tool_event(
+            emit_event,
+            {
+                "type": "tool_end",
+                "tool": "search_graph_database",
+                "output": {"count": len(results)},
+            },
+        )
+        return _to_json(results)
+
     async def get_graph_context(openalex_ids: list[str]) -> str:
         """Get graph context for OpenAlex paper IDs from Neo4j."""
         _emit_tool_event(
@@ -186,12 +213,15 @@ def create_research_tools(
         )
         return _to_json(context)
 
-    return [
-        StructuredTool.from_function(coroutine=search_openalex),
-        StructuredTool.from_function(coroutine=ingest_papers),
-        StructuredTool.from_function(coroutine=search_vector_database),
-        StructuredTool.from_function(coroutine=get_graph_context),
-    ]
+    tools = {
+        "search_openalex": StructuredTool.from_function(coroutine=search_openalex),
+        "ingest_papers": StructuredTool.from_function(coroutine=ingest_papers),
+        "search_vector_database": StructuredTool.from_function(coroutine=search_vector_database),
+        "search_graph_database": StructuredTool.from_function(coroutine=search_graph_database),
+        "get_graph_context": StructuredTool.from_function(coroutine=get_graph_context),
+    }
+
+    return [tool for tool_name, tool in tools.items() if is_enabled(tool_name)]
 
 
 @dataclass
@@ -200,6 +230,7 @@ class ResearchAgent:
     model_name: str
     api_key: str
     emit_event: Callable[[AgentEvent], None] | None = None
+    system_prompt: str | None = None
     events: list[AgentEvent] = field(default_factory=list)
 
     @tracer.start_as_current_span("agent.run")
@@ -213,7 +244,8 @@ class ResearchAgent:
         agent = create_agent(
             model=llm,
             tools=self.tools,
-            system_prompt=(
+            system_prompt=self.system_prompt
+            or (
                 "You are PaperGraph AI, a research assistant for academic papers. "
                 "Use tools to search, ingest, retrieve, and inspect graph context before "
                 "answering. Prefer stored vector and graph data when available. "
