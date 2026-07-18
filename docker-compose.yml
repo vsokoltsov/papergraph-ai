@@ -6,7 +6,19 @@ services:
       - "6333:6333"
       - "6334:6334"
     volumes:
-      - ./qdrant_storage:/qdrant/storage
+      - qdrant_storage:/qdrant/storage
+
+  neo4j:
+    image: neo4j:5-community
+    container_name: papergraph-neo4j
+    ports:
+      - "7474:7474"
+      - "7687:7687"
+    environment:
+      NEO4J_AUTH: neo4j/password
+    volumes:
+      - neo4j_data:/data
+      - neo4j_logs:/logs
 
   prometheus:
     image: prom/prometheus:latest
@@ -15,7 +27,7 @@ services:
       - "9090:9090"
     volumes:
       - ./infra/monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
-      - ./prometheus_storage:/prometheus
+      - prometheus_storage:/prometheus
     command:
       - "--config.file=/etc/prometheus/prometheus.yml"
       - "--storage.tsdb.path=/prometheus"
@@ -23,13 +35,14 @@ services:
   tempo:
     image: grafana/tempo:latest
     container_name: papergraph-tempo
+    user: "0:0"
     ports:
       - "3200:3200"
       - "4317:4317"
       - "4318:4318"
     volumes:
       - ./infra/monitoring/tempo/tempo.yml:/etc/tempo.yml:ro
-      - ./tempo_storage:/tmp/tempo
+      - tempo_storage:/tmp/tempo
     command:
       - "-config.file=/etc/tempo.yml"
 
@@ -42,9 +55,17 @@ services:
       GF_SECURITY_ADMIN_USER: admin
       GF_SECURITY_ADMIN_PASSWORD: admin
     volumes:
-      - ./grafana_storage:/var/lib/grafana
+      - grafana_storage:/var/lib/grafana
       - ./infra/monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
       - ./infra/monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
     depends_on:
       - prometheus
       - tempo
+
+volumes:
+  qdrant_storage:
+  neo4j_data:
+  neo4j_logs:
+  prometheus_storage:
+  tempo_storage:
+  grafana_storage:
