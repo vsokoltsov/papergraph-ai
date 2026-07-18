@@ -12,8 +12,10 @@ import asyncio
 from opentelemetry import trace
 
 from app.clients.openalex import OpenAlexClient
+from app.db.neo4j import get_neo4j_driver
 from app.db.qdrant import get_qdrant_client
 from app.errors import NoArticlesError
+from app.repositories.graph import GraphRepository
 from app.repositories.vector import VectorRepository
 from app.services.papers import PapersService
 from app.settings import get_settings
@@ -37,9 +39,23 @@ async def main() -> None:
     )
     args = parser.parse_args()
     openalex_client = OpenAlexClient(api_key=settings.OPENALEX_API_KEY)
-    client = get_qdrant_client(url=settings.QDRANT_URL)
-    repository = VectorRepository(db=client, collection_name=settings.QDRANT_COLLECTION_NAME)
-    service = PapersService(openalex_client=openalex_client, vector_repository=repository)
+    qdrant_db = get_qdrant_client(url=settings.QDRANT_URL)
+    neo4j_db = get_neo4j_driver(
+        uri=settings.NEO4J_URI,
+        user=settings.NEO4J_USER,
+        password=settings.NEO4J_PASSWORD,
+    )
+
+    vector_repository = VectorRepository(
+        db=qdrant_db,
+        collection_name=settings.QDRANT_COLLECTION_NAME,
+    )
+    graph_repository = GraphRepository(db=neo4j_db)
+    service = PapersService(
+        openalex_client=openalex_client,
+        vector_repository=vector_repository,
+        graph_repository=graph_repository,
+    )
 
     await search_and_insert_articles(service=service, query=args.keyword, limit=args.limit)
 
@@ -52,7 +68,7 @@ async def search_and_insert_articles(service: PapersService, query: str, limit: 
         print("No articles found")
         return
 
-    service.insert_articles(articles=articles)
+    await service.insert_articles(articles=articles)
 
 
 if __name__ == "__main__":
