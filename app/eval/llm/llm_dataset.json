@@ -11,7 +11,7 @@
   },
   {
     "question": "Which retrieved papers share a focus on graph-based retrieval rather than plain chunk retrieval?",
-    "answer_orig": "The GraphRAG survey, the engineering context-aware KG-RAG paper, the patient portal emergency triage paper, the Nanjing Yunjin QA paper, and the biomedical KG-RAG prompt generation paper all emphasize graph-based or knowledge-graph-based retrieval. They contrast graph structure with simpler retrieval over isolated chunks or plain text.",
+    "answer_orig": "The answer should first retrieve relevant papers from the vector database, then use graph context to compare topics and metadata. Relevant papers include the GraphRAG survey, the engineering context-aware KG-RAG paper, the patient portal emergency triage paper, the Nanjing Yunjin QA paper, and the biomedical KG-RAG prompt generation paper. They all emphasize graph-based or knowledge-graph-based retrieval and contrast graph structure with simpler retrieval over isolated chunks or plain text.",
     "document": "https://openalex.org/W4416379250"
   },
   {
@@ -21,7 +21,7 @@
   },
   {
     "question": "Compare the engineering KG-RAG paper and the GraphRAG survey on why graph structure matters.",
-    "answer_orig": "The engineering paper argues that fixed-size chunk retrieval is insufficient for engineering code, standards, and design documents because important technical information is semantically linked across sources. The GraphRAG survey gives the broader framing: GraphRAG uses structural information across entities for more precise and comprehensive retrieval and more accurate, context-aware generation.",
+    "answer_orig": "The answer should retrieve both papers semantically and then use graph context to identify their paper records, topics, and related metadata. The engineering paper argues that fixed-size chunk retrieval is insufficient for engineering code, standards, and design documents because important technical information is semantically linked across sources. The GraphRAG survey gives the broader framing: GraphRAG uses structural information across entities for more precise and comprehensive retrieval and more accurate, context-aware generation.",
     "document": "https://openalex.org/W4416402923"
   },
   {
@@ -36,7 +36,7 @@
   },
   {
     "question": "Which papers should I read to understand GraphRAG research directions and real domain applications?",
-    "answer_orig": "The Graph Retrieval-Augmented Generation survey is the main paper for research directions because it reviews methodology, tasks, applications, evaluation, and industrial use cases. For domain applications, useful examples include the patient portal emergency triage paper in clinical messaging, the biomedical KG-RAG prompt generation paper in biomedicine, the engineering context-aware KG-RAG paper in engineering standards, and the Nanjing Yunjin QA paper in cultural heritage.",
+    "answer_orig": "The answer should combine semantic retrieval with graph context. The Graph Retrieval-Augmented Generation survey is the main paper for research directions because it reviews methodology, tasks, applications, evaluation, and industrial use cases. For domain applications, useful examples include the patient portal emergency triage paper in clinical messaging, the biomedical KG-RAG prompt generation paper in biomedicine, the engineering context-aware KG-RAG paper in engineering standards, and the Nanjing Yunjin QA paper in cultural heritage. Graph context can help group these papers by topics, sources, and other metadata.",
     "document": "https://openalex.org/W4416379250"
   },
   {
@@ -46,7 +46,7 @@
   },
   {
     "question": "Across the ingested papers, where is Graph RAG used outside biomedicine?",
-    "answer_orig": "Graph RAG is used outside biomedicine in the Nanjing Yunjin intelligent question-answering system for cultural heritage and traditional silk weaving knowledge, and in the engineering context-aware KG-RAG paper for engineering code, technical standards, and design documents.",
+    "answer_orig": "The answer should retrieve candidate papers from title and abstract content, then use graph context to compare their domains or topics. Graph RAG is used outside biomedicine in the Nanjing Yunjin intelligent question-answering system for cultural heritage and traditional silk weaving knowledge, and in the engineering context-aware KG-RAG paper for engineering code, technical standards, and design documents.",
     "document": "https://openalex.org/W4394619840"
   }
 ]

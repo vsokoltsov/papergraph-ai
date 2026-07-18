@@ -5,8 +5,10 @@ import asyncio
 import sys
 from contextlib import redirect_stdout
 from pathlib import Path
+from typing import cast
 
-from app.eval.llm.utils import render_results, run_evaluation
+from app.eval.llm.models import AgentApproach
+from app.eval.llm.utils import EVALUATION_APPROACHES, render_results, run_evaluation_for_approaches
 
 
 async def main() -> None:
@@ -28,10 +30,27 @@ async def main() -> None:
         type=Path,
         help="Write llm-eval.md and llm-eval.json from a single evaluation run.",
     )
+    parser.add_argument(
+        "--limit",
+        type=int,
+        default=None,
+        help="Maximum number of dataset examples to evaluate.",
+    )
+    parser.add_argument(
+        "--approaches",
+        nargs="+",
+        choices=EVALUATION_APPROACHES,
+        default=EVALUATION_APPROACHES,
+        help="Agent approaches to evaluate.",
+    )
     args = parser.parse_args()
 
     with redirect_stdout(sys.stderr):
-        results = await run_evaluation(dataset_path=args.dataset)
+        results = await run_evaluation_for_approaches(
+            dataset_path=args.dataset,
+            approaches=[cast(AgentApproach, approach) for approach in args.approaches],
+            limit=args.limit,
+        )
 
     if args.output_dir:
         args.output_dir.mkdir(parents=True, exist_ok=True)

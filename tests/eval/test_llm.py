@@ -7,6 +7,7 @@ import pytest
 from app.eval.llm import evaluate
 from app.eval.llm.judge import agent_judge_prompt
 from app.eval.llm.models import AgentAnswerRecord, AgentEvaluation, EvaluationItem, EvaluationResult
+from app.eval.llm.runner import system_prompt_for_approach
 from app.eval.llm.utils import (
     best_result,
     extract_tool_calls,
@@ -15,6 +16,7 @@ from app.eval.llm.utils import (
     load_dataset,
     render_results,
     results_to_dataframe,
+    run_evaluation_for_approaches,
     summary_to_dataframe,
 )
 
@@ -62,6 +64,20 @@ def test_agent_judge_prompt_contains_answer_and_trajectory_inputs() -> None:
     assert "Agent answer:" in prompt
     assert "Tool calls:" in prompt
     assert "search_openalex" in prompt
+
+
+def test_vector_plus_graph_prompt_requires_vector_first_graph_second() -> None:
+    prompt = system_prompt_for_approach("vector_plus_graph")
+
+    assert "Always use vector search first" in prompt
+    assert "Then inspect graph context" in prompt
+    assert "Neo4j stores graph metadata and relationships" in prompt
+
+
+def test_graph_only_prompt_mentions_missing_abstracts() -> None:
+    prompt = system_prompt_for_approach("graph_only")
+
+    assert "Neo4j does not store abstracts" in prompt
 
 
 @pytest.mark.asyncio
@@ -132,22 +148,6 @@ def test_summary_to_dataframe_calculates_pass_rates() -> None:
             "trajectory_good": 2,
             "trajectory_good_rate": 1.0,
         },
-        {
-            "approach": "graph_only",
-            "total": 0,
-            "answer_good": 0,
-            "answer_good_rate": 0.0,
-            "trajectory_good": 0,
-            "trajectory_good_rate": 0.0,
-        },
-        {
-            "approach": "vector_plus_graph",
-            "total": 0,
-            "answer_good": 0,
-            "answer_good_rate": 0.0,
-            "trajectory_good": 0,
-            "trajectory_good_rate": 0.0,
-        },
     ]
 
 
@@ -204,17 +204,23 @@ def test_render_results_as_json() -> None:
     assert '"summary"' in output
     assert '"results"' in output
     assert '"answer_score": "good"' in output
-    assert output.count('"approach"') == 4
+    assert output.count('"approach"') == 2
 
 
 @pytest.mark.asyncio
 async def test_cli_redirects_runtime_logs_to_stderr(monkeypatch, capsys) -> None:
-    async def fake_run_evaluation(dataset_path: Path) -> list[EvaluationResult]:
+    async def fake_run_evaluation(
+        dataset_path: Path,
+        approaches: list,
+        limit: int | None,
+    ) -> list[EvaluationResult]:
         assert dataset_path == Path("dataset.json")
+        assert approaches == ["vector_only", "graph_only", "vector_plus_graph"]
+        assert limit is None
         print("runtime log")
         return [sample_result()]
 
-    monkeypatch.setattr(evaluate, "run_evaluation", fake_run_evaluation)
+    monkeypatch.setattr(evaluate, "run_evaluation_for_approaches", fake_run_evaluation)
     monkeypatch.setattr(
         "sys.argv",
         [
@@ -242,13 +248,19 @@ async def test_cli_writes_markdown_and_json_from_one_run(
 ) -> None:
     calls = 0
 
-    async def fake_run_evaluation(dataset_path: Path) -> list[EvaluationResult]:
+    async def fake_run_evaluation(
+        dataset_path: Path,
+        approaches: list,
+        limit: int | None,
+    ) -> list[EvaluationResult]:
         nonlocal calls
         calls += 1
         assert dataset_path == Path("dataset.json")
+        assert approaches == ["vector_only", "vector_plus_graph"]
+        assert limit == 2
         return [sample_result()]
 
-    monkeypatch.setattr(evaluate, "run_evaluation", fake_run_evaluation)
+    monkeypatch.setattr(evaluate, "run_evaluation_for_approaches", fake_run_evaluation)
     monkeypatch.setattr(
         "sys.argv",
         [
@@ -257,6 +269,11 @@ async def test_cli_writes_markdown_and_json_from_one_run(
             "dataset.json",
             "--output-format",
             "markdown",
+            "--limit",
+            "2",
+            "--approaches",
+            "vector_only",
+            "vector_plus_graph",
             "--output-dir",
             str(tmp_path),
         ],
@@ -269,6 +286,54 @@ async def test_cli_writes_markdown_and_json_from_one_run(
     assert "Best LLM approach: `vector_only`" in captured.out
     assert "Best LLM approach: `vector_only`" in (tmp_path / "llm-eval.md").read_text()
     assert '"best_approach": "vector_only"' in (tmp_path / "llm-eval.json").read_text()
+
+
+@pytest.mark.asyncio
+async def test_run_evaluation_for_approaches_limits_dataset_and_approaches(monkeypatch) -> None:
+    class FakeRunner:
+        def __init__(self, approach):
+            self.approach = approach
+
+        async def run(self, question: str) -> dict[str, Any]:
+            return {"answer": f"{self.approach}: {question}", "events": []}
+
+    class FakeJudge:
+        def __init__(self, model_name: str, api_key: str) -> None:
+            assert model_name == "test-model"
+            assert api_key == "test-key"
+
+        async def evaluate(self, record: AgentAnswerRecord) -> AgentEvaluation:
+            return AgentEvaluation(
+                answer_score="good",
+                answer_reasoning="ok",
+                trajectory_score="good",
+                trajectory_reasoning="ok",
+            )
+
+    class FakeSettings:
+        LLM_MODEL = "test-model"
+        OPENAI_API_KEY = "test-key"
+
+    monkeypatch.setattr("app.eval.llm.utils.PaperGraphAgentRunner", FakeRunner)
+    monkeypatch.setattr("app.eval.llm.utils.LangChainLLMJudge", FakeJudge)
+    monkeypatch.setattr("app.eval.llm.utils.get_settings", lambda: FakeSettings())
+    monkeypatch.setattr(
+        "app.eval.llm.utils.load_dataset",
+        lambda path: [
+            EvaluationItem(question="q1", answer_orig="a1"),
+            EvaluationItem(question="q2", answer_orig="a2"),
+            EvaluationItem(question="q3", answer_orig="a3"),
+        ],
+    )
+
+    results = await run_evaluation_for_approaches(
+        dataset_path=Path("dataset.json"),
+        approaches=["vector_plus_graph"],
+        limit=2,
+    )
+
+    assert [result.question for result in results] == ["q1", "q2"]
+    assert {result.approach for result in results} == {"vector_plus_graph"}
 
 
 def sample_answer_record() -> AgentAnswerRecord:

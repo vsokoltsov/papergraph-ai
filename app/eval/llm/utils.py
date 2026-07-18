@@ -135,10 +135,36 @@ async def run_evaluation(dataset_path: Path) -> list[EvaluationResult]:
         Judged answer and trajectory results.
     """
 
+    return await run_evaluation_for_approaches(
+        dataset_path=dataset_path,
+        approaches=EVALUATION_APPROACHES,
+        limit=None,
+    )
+
+
+async def run_evaluation_for_approaches(
+    dataset_path: Path,
+    approaches: list[AgentApproach],
+    limit: int | None = None,
+) -> list[EvaluationResult]:
+    """Run LLM evaluation for selected approaches and examples.
+
+    Args:
+        dataset_path: Path to the LLM evaluation dataset.
+        approaches: Agent approaches to evaluate.
+        limit: Optional maximum number of examples to evaluate.
+
+    Returns:
+        Judged answer and trajectory results.
+    """
+
     settings = get_settings()
     dataset = load_dataset(dataset_path)
+    if limit is not None:
+        dataset = dataset[:limit]
+
     records = []
-    for approach in EVALUATION_APPROACHES:
+    for approach in approaches:
         records.extend(
             await generate_agent_answers(
                 dataset=dataset,
@@ -190,7 +216,12 @@ def summary_to_dataframe(results: list[EvaluationResult]) -> pd.DataFrame:
     """
 
     rows = []
-    for approach in EVALUATION_APPROACHES:
+    approaches = [
+        approach
+        for approach in EVALUATION_APPROACHES
+        if any(result.approach == approach for result in results)
+    ]
+    for approach in approaches:
         approach_results = [result for result in results if result.approach == approach]
         total = len(approach_results)
         answer_good = len([result for result in approach_results if result.answer_score == "good"])
