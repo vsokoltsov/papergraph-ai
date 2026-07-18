@@ -5,6 +5,14 @@ from neo4j import AsyncDriver, AsyncManagedTransaction
 from opentelemetry import trace
 
 tracer = trace.get_tracer(__name__)
+OPENALEX_URL_PREFIX = "https://openalex.org/"
+
+
+def normalize_openalex_id(openalex_id: str) -> str:
+    if openalex_id.startswith(OPENALEX_URL_PREFIX):
+        return openalex_id
+
+    return f"{OPENALEX_URL_PREFIX}{openalex_id}"
 
 
 @dataclass
@@ -459,6 +467,10 @@ class GraphRepository:
         if not openalex_ids:
             return []
 
+        normalized_openalex_ids = [
+            normalize_openalex_id(openalex_id) for openalex_id in openalex_ids
+        ]
+
         async with self.db.session() as session:
             result = await session.run(
                 """
@@ -530,7 +542,7 @@ class GraphRepository:
                         }
                     ] AS references
                 """,
-                openalex_ids=openalex_ids,
+                openalex_ids=normalized_openalex_ids,
             )
             return await result.data()
 
