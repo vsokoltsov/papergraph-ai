@@ -5,6 +5,16 @@ on:
   push:
     branches:
       - main
+  workflow_dispatch:
+    inputs:
+      llm_eval_mode:
+        description: "LLM evaluation size"
+        required: true
+        default: smoke
+        type: choice
+        options:
+          - smoke
+          - full
 
 jobs:
   lint:
@@ -159,6 +169,7 @@ jobs:
         run: |
           uv run python -m app.eval.retrieval.evaluate \
             --output-format markdown \
+            --approaches qdrant_vector neo4j_graph qdrant_vector_plus_graph \
             --output-dir eval-results
 
       - name: Add evaluation summary
@@ -247,7 +258,18 @@ jobs:
       - name: Seed evaluation databases
         run: uv run python -m app.cli "knowledge graph based retrieval augmented generation" --limit 10
 
-      - name: Run LLM evaluation
+      - name: Run LLM smoke evaluation
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.llm_eval_mode == 'smoke' }}
+        run: |
+          uv run python -m app.eval.llm.evaluate \
+            --dataset app/eval/llm/llm_dataset.json \
+            --output-format markdown \
+            --limit 2 \
+            --approaches vector_only vector_plus_graph \
+            --output-dir eval-results
+
+      - name: Run full LLM evaluation
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.llm_eval_mode == 'full' }}
         run: |
           uv run python -m app.eval.llm.evaluate \
             --dataset app/eval/llm/llm_dataset.json \
