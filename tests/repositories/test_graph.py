@@ -86,6 +86,7 @@ async def test_upsert_articles_graph_stores_nodes_relationships_and_is_idempoten
     await repository.upsert_articles_graph([article])
     await repository.upsert_articles_graph([article])
     contexts = await repository.get_paper_context([article.id])
+    graph_results = await repository.search_papers("graph", limit=1)
 
     async with driver.session() as session:
         result = await session.run(
@@ -182,5 +183,21 @@ async def test_upsert_articles_graph_stores_nodes_relationships_and_is_idempoten
                     "publication_year": None,
                 }
             ],
+        }
+    ]
+    assert graph_results == [
+        {
+            "paper": {
+                "openalex_id": "https://openalex.org/W1",
+                "doi": "https://doi.org/10.123/test",
+                "title": "Graph RAG",
+                "publication_year": 2024,
+                "publication_date": "2024-01-01",
+                "language": "en",
+                "type": "article",
+                "cited_by_count": 7,
+            },
+            "topics": ["Retrieval Augmented Generation"],
+            "sources": ["Journal of Graphs"],
         }
     ]

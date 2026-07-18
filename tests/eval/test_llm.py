@@ -61,10 +61,12 @@ async def test_generate_agent_answers_runs_agent_and_extracts_tool_calls() -> No
             )
         ],
         runner=FakeAgentRunner(),
+        approach="vector_only",
     )
 
     assert records == [
         AgentAnswerRecord(
+            approach="vector_only",
             question="Explain Graph RAG.",
             answer_agent="Agent answer.",
             answer_orig="Expected answer.",
@@ -88,6 +90,7 @@ async def test_judge_agent_answers_returns_structured_results() -> None:
 
     assert results == [
         EvaluationResult(
+            approach="vector_only",
             question="Explain Graph RAG.",
             document="doc-1",
             answer_score="good",
@@ -108,18 +111,36 @@ def test_summary_to_dataframe_calculates_pass_rates() -> None:
 
     assert dataframe.to_dict(orient="records") == [
         {
+            "approach": "vector_only",
             "total": 2,
             "answer_good": 1,
             "answer_good_rate": 0.5,
             "trajectory_good": 2,
             "trajectory_good_rate": 1.0,
-        }
+        },
+        {
+            "approach": "graph_only",
+            "total": 0,
+            "answer_good": 0,
+            "answer_good_rate": 0.0,
+            "trajectory_good": 0,
+            "trajectory_good_rate": 0.0,
+        },
+        {
+            "approach": "vector_plus_graph",
+            "total": 0,
+            "answer_good": 0,
+            "answer_good_rate": 0.0,
+            "trajectory_good": 0,
+            "trajectory_good_rate": 0.0,
+        },
     ]
 
 
 def test_results_to_dataframe_returns_detail_rows() -> None:
     dataframe = results_to_dataframe([sample_result()])
 
+    assert dataframe["approach"].to_list() == ["vector_only"]
     assert dataframe["answer_score"].to_list() == ["good"]
     assert dataframe["trajectory_score"].to_list() == ["good"]
 
@@ -136,7 +157,7 @@ def test_render_results_as_markdown() -> None:
     output = render_results([sample_result()], output_format="markdown")
 
     assert "## LLM Evaluation Summary" in output
-    assert "|   total" in output
+    assert "| approach" in output
     assert "## LLM Evaluation Details" in output
 
 
@@ -150,6 +171,7 @@ def test_render_results_as_json() -> None:
 
 def sample_answer_record() -> AgentAnswerRecord:
     return AgentAnswerRecord(
+        approach="vector_only",
         question="Explain Graph RAG.",
         answer_agent="Agent answer.",
         answer_orig="Expected answer.",
@@ -168,6 +190,7 @@ def sample_result(
     trajectory_score: Literal["good", "bad"] = "good",
 ) -> EvaluationResult:
     return EvaluationResult(
+        approach="vector_only",
         question="Explain Graph RAG.",
         document="doc-1",
         answer_score=answer_score,
