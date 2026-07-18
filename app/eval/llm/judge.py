@@ -99,6 +99,9 @@ def agent_judge_prompt(record: AgentAnswerRecord) -> str:
 Question:
 {record.question}
 
+Evaluated approach:
+{record.approach}
+
 Ground-truth answer:
 {record.answer_orig}
 
