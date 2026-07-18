@@ -1,0 +1,16 @@
+[
+  {
+    "question": "graph rag",
+    "expected_openalex_ids": [
+      "https://openalex.org/W4399305008",
+      "https://openalex.org/W2121289117"
+    ]
+  },
+  {
+    "question": "retrieval augmented generation knowledge graph",
+    "expected_openalex_ids": [
+      "https://openalex.org/W4399305008",
+      "https://openalex.org/W2121289117"
+    ]
+  }
+]
