@@ -1,6 +1,6 @@
 PYTHON_TARGETS = app migrations tests
 
-.PHONY: check lint format-check typecheck test backend fix format
+.PHONY: check lint format-check typecheck test backend ui fix format
 
 check: lint format-check typecheck test
 
@@ -18,6 +18,9 @@ test:
 
 backend:
 	uv run uvicorn app.api:app --reload
+
+ui:
+	uv run streamlit run app/ui.py
 
 fix:
 	uv run ruff check $(PYTHON_TARGETS) --fix
