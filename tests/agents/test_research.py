@@ -4,7 +4,7 @@ from typing import Any
 
 import pytest
 
-from app.agents.research import create_research_tools
+from app.agents.research import create_research_tools, format_agent_event
 from app.clients.openalex import OpenAlexArticle
 
 
@@ -61,18 +61,18 @@ def _tools_by_name():
     return {tool.name: tool for tool in tools}, papers_service
 
 
-def _tools_by_name_with_logs():
+def _tools_by_name_with_events():
     article = OpenAlexArticle(id="https://openalex.org/W1", title="Graph RAG")
     papers_service = FakePapersService(articles=[article])
-    logs = []
+    events = []
     tools = create_research_tools(
         papers_service=papers_service,
         vector_repository=FakeVectorRepository(),
         graph_repository=FakeGraphRepository(),
-        log=logs.append,
+        emit_event=events.append,
     )
 
-    return {tool.name: tool for tool in tools}, logs
+    return {tool.name: tool for tool in tools}, events
 
 
 @pytest.mark.asyncio
@@ -129,12 +129,33 @@ async def test_get_graph_context_tool_returns_context() -> None:
 
 
 @pytest.mark.asyncio
-async def test_tools_emit_action_logs_when_logger_is_provided() -> None:
-    tools, logs = _tools_by_name_with_logs()
+async def test_tools_emit_structured_action_events() -> None:
+    tools, events = _tools_by_name_with_events()
 
     await tools["search_openalex"].ainvoke({"query": "graph rag", "limit": 1})
 
-    assert logs == [
-        "[agent] search_openalex query='graph rag' limit=1",
-        "[agent] search_openalex found=1",
+    assert events == [
+        {
+            "type": "tool_start",
+            "tool": "search_openalex",
+            "input": {"query": "graph rag", "limit": 1},
+        },
+        {
+            "type": "tool_end",
+            "tool": "search_openalex",
+            "output": {"count": 1},
+        },
     ]
+
+
+def test_format_agent_event_returns_cli_log_line() -> None:
+    assert (
+        format_agent_event(
+            {
+                "type": "tool_start",
+                "tool": "search_vector_database",
+                "input": {"query": "graph rag", "limit": 5},
+            }
+        )
+        == "[agent] search_vector_database query='graph rag' limit=5"
+    )

@@ -9,7 +9,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 
-from app.agents.research import ResearchAgent, create_research_tools
+from app.agents.research import AgentEvent, ResearchAgent, create_research_tools, format_agent_event
 from app.clients.openalex import OpenAlexClient
 from app.db.neo4j import get_neo4j_driver
 from app.db.qdrant import get_qdrant_client
@@ -45,17 +45,23 @@ async def main() -> None:
         vector_repository=vector_repository,
         graph_repository=graph_repository,
     )
+    events: list[AgentEvent] = []
+
+    def emit_event(event: AgentEvent) -> None:
+        events.append(event)
+        print(format_agent_event(event))
+
     tools = create_research_tools(
         papers_service=papers_service,
         vector_repository=vector_repository,
         graph_repository=graph_repository,
-        log=print,
+        emit_event=emit_event,
     )
     agent = ResearchAgent(
         tools=tools,
         model_name=settings.LLM_MODEL,
         api_key=settings.OPENAI_API_KEY,
-        log=print,
+        emit_event=emit_event,
     )
 
     answer = await agent.run(args.question)
