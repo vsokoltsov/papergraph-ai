@@ -3,6 +3,7 @@ from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
 from typing import Any, Protocol
 
+import structlog
 from langchain.agents import create_agent
 from langchain_core.messages import HumanMessage
 from langchain_core.tools import BaseTool, StructuredTool
@@ -12,6 +13,7 @@ from opentelemetry import trace
 from app.clients.openalex import OpenAlexArticle
 
 tracer = trace.get_tracer(__name__)
+logger = structlog.get_logger(__name__)
 AgentEvent = dict[str, Any]
 
 
@@ -49,22 +51,43 @@ def _article_preview(article: OpenAlexArticle) -> dict[str, Any]:
 
 def format_agent_event(event: AgentEvent) -> str:
     event_type = event["type"]
-    if event_type == "run_start":
-        return f"[agent] run question={event['input']['question']!r}"
-    if event_type == "run_end":
-        return "[agent] final_answer_ready"
-    if event_type == "tool_start":
-        tool = event["tool"]
-        tool_input = event["input"]
-        if "query" in tool_input:
-            return f"[agent] {tool} query={tool_input['query']!r} limit={tool_input['limit']}"
-        if "openalex_ids" in tool_input:
-            return f"[agent] {tool} papers={len(tool_input['openalex_ids'])}"
-    if event_type == "tool_end":
-        tool = event["tool"]
-        return f"[agent] {tool} found={event['output']['count']}"
+    match event_type:
+        case "run_start":
+            return f"[agent] run question={event['input']['question']!r}"
+        case "run_end":
+            return "[agent] final_answer_ready"
+        case "tool_start":
+            tool = event["tool"]
+            tool_input = event["input"]
+            match tool_input:
+                case {"query": query, "limit": limit}:
+                    return f"[agent] {tool} query={query!r} limit={limit}"
+                case {"openalex_ids": openalex_ids}:
+                    return f"[agent] {tool} papers={len(openalex_ids)}"
+        case "tool_end":
+            tool = event["tool"]
+            return f"[agent] {tool} found={event['output']['count']}"
 
     return f"[agent] {event_type}"
+
+
+def log_agent_event(event: AgentEvent) -> None:
+    event_type = event["type"]
+    log_data: dict[str, Any] = {"event_type": event_type}
+
+    if "tool" in event:
+        log_data["tool"] = event["tool"]
+    match event_type:
+        case "run_start":
+            log_data["question"] = event["input"]["question"]
+        case "run_end":
+            log_data["answer_length"] = len(event["output"]["answer"])
+        case "tool_start":
+            log_data.update(event["input"])
+        case "tool_end":
+            log_data.update(event["output"])
+
+    logger.info("agent_event", **log_data)
 
 
 def create_research_tools(
@@ -75,45 +98,45 @@ def create_research_tools(
 ) -> list[BaseTool]:
     async def search_openalex(query: str, limit: int = 5) -> str:
         """Search OpenAlex for papers and return short metadata previews."""
-        if emit_event:
-            emit_event(
-                {
-                    "type": "tool_start",
-                    "tool": "search_openalex",
-                    "input": {"query": query, "limit": limit},
-                }
-            )
+        _emit_tool_event(
+            emit_event,
+            {
+                "type": "tool_start",
+                "tool": "search_openalex",
+                "input": {"query": query, "limit": limit},
+            },
+        )
         articles = await papers_service.get_articles(query=query, limit=limit)
-        if emit_event:
-            emit_event(
-                {
-                    "type": "tool_end",
-                    "tool": "search_openalex",
-                    "output": {"count": len(articles)},
-                }
-            )
+        _emit_tool_event(
+            emit_event,
+            {
+                "type": "tool_end",
+                "tool": "search_openalex",
+                "output": {"count": len(articles)},
+            },
+        )
         return _to_json([_article_preview(article) for article in articles])
 
     async def ingest_papers(query: str, limit: int = 5) -> str:
         """Search OpenAlex and store matching papers in vector and graph databases."""
-        if emit_event:
-            emit_event(
-                {
-                    "type": "tool_start",
-                    "tool": "ingest_papers",
-                    "input": {"query": query, "limit": limit},
-                }
-            )
+        _emit_tool_event(
+            emit_event,
+            {
+                "type": "tool_start",
+                "tool": "ingest_papers",
+                "input": {"query": query, "limit": limit},
+            },
+        )
         articles = await papers_service.get_articles(query=query, limit=limit)
         await papers_service.insert_articles(articles=articles)
-        if emit_event:
-            emit_event(
-                {
-                    "type": "tool_end",
-                    "tool": "ingest_papers",
-                    "output": {"count": len(articles)},
-                }
-            )
+        _emit_tool_event(
+            emit_event,
+            {
+                "type": "tool_end",
+                "tool": "ingest_papers",
+                "output": {"count": len(articles)},
+            },
+        )
         return _to_json(
             {
                 "inserted_count": len(articles),
@@ -123,44 +146,44 @@ def create_research_tools(
 
     async def search_vector_database(query: str, limit: int = 5) -> str:
         """Search stored paper titles and abstracts in the vector database."""
-        if emit_event:
-            emit_event(
-                {
-                    "type": "tool_start",
-                    "tool": "search_vector_database",
-                    "input": {"query": query, "limit": limit},
-                }
-            )
+        _emit_tool_event(
+            emit_event,
+            {
+                "type": "tool_start",
+                "tool": "search_vector_database",
+                "input": {"query": query, "limit": limit},
+            },
+        )
         results = await vector_repository.search_papers(query=query, limit=limit)
-        if emit_event:
-            emit_event(
-                {
-                    "type": "tool_end",
-                    "tool": "search_vector_database",
-                    "output": {"count": len(results)},
-                }
-            )
+        _emit_tool_event(
+            emit_event,
+            {
+                "type": "tool_end",
+                "tool": "search_vector_database",
+                "output": {"count": len(results)},
+            },
+        )
         return _to_json(results)
 
     async def get_graph_context(openalex_ids: list[str]) -> str:
         """Get graph context for OpenAlex paper IDs from Neo4j."""
-        if emit_event:
-            emit_event(
-                {
-                    "type": "tool_start",
-                    "tool": "get_graph_context",
-                    "input": {"openalex_ids": openalex_ids},
-                }
-            )
+        _emit_tool_event(
+            emit_event,
+            {
+                "type": "tool_start",
+                "tool": "get_graph_context",
+                "input": {"openalex_ids": openalex_ids},
+            },
+        )
         context = await graph_repository.get_paper_context(openalex_ids=openalex_ids)
-        if emit_event:
-            emit_event(
-                {
-                    "type": "tool_end",
-                    "tool": "get_graph_context",
-                    "output": {"count": len(context)},
-                }
-            )
+        _emit_tool_event(
+            emit_event,
+            {
+                "type": "tool_end",
+                "tool": "get_graph_context",
+                "output": {"count": len(context)},
+            },
+        )
         return _to_json(context)
 
     return [
@@ -209,5 +232,15 @@ class ResearchAgent:
 
     def _emit(self, event: AgentEvent) -> None:
         self.events.append(event)
+        log_agent_event(event)
         if self.emit_event:
             self.emit_event(event)
+
+
+def _emit_tool_event(
+    emit_event: Callable[[AgentEvent], None] | None,
+    event: AgentEvent,
+) -> None:
+    log_agent_event(event)
+    if emit_event:
+        emit_event(event)

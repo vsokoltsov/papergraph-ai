@@ -13,6 +13,7 @@ from app.agents.research import AgentEvent, ResearchAgent, create_research_tools
 from app.clients.openalex import OpenAlexClient
 from app.db.neo4j import get_neo4j_driver
 from app.db.qdrant import get_qdrant_client
+from app.logging import configure_logging
 from app.repositories.graph import GraphRepository
 from app.repositories.vector import VectorRepository
 from app.services.papers import PapersService
@@ -22,6 +23,7 @@ from app.tracing import configure_tracing
 
 async def main() -> None:
     settings = get_settings()
+    configure_logging(settings.LOG_LEVEL)
     configure_tracing(settings)
 
     parser = argparse.ArgumentParser(description="Run the PaperGraph AI research agent.")
