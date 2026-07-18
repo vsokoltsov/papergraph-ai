@@ -15,6 +15,18 @@ def normalize_openalex_id(openalex_id: str) -> str:
     return f"{OPENALEX_URL_PREFIX}{openalex_id}"
 
 
+def restore_abstract(index: dict[str, list[int]] | None) -> str | None:
+    if not index:
+        return None
+
+    words = {}
+    for word, positions in index.items():
+        for position in positions:
+            words[position] = word
+
+    return " ".join(words[i] for i in sorted(words))
+
+
 @dataclass
 class GraphRepository:
     db: AsyncDriver
@@ -27,6 +39,7 @@ class GraphRepository:
                 MERGE (p:Paper {openalex_id: $openalex_id})
                 SET p.doi = $doi,
                     p.title = $title,
+                    p.abstract = $abstract,
                     p.publication_year = $publication_year,
                     p.publication_date = $publication_date,
                     p.language = $language,
@@ -36,6 +49,7 @@ class GraphRepository:
                 openalex_id=article.id,
                 doi=article.doi,
                 title=article.title,
+                abstract=restore_abstract(article.abstract_inverted_index),
                 publication_year=article.publication_year,
                 publication_date=article.publication_date,
                 language=article.language,
@@ -261,6 +275,7 @@ class GraphRepository:
                 "openalex_id": article.id,
                 "doi": article.doi,
                 "title": article.title,
+                "abstract": restore_abstract(article.abstract_inverted_index),
                 "publication_year": article.publication_year,
                 "publication_date": article.publication_date,
                 "language": article.language,
@@ -365,6 +380,7 @@ class GraphRepository:
             MERGE (p:Paper {openalex_id: row.openalex_id})
             SET p.doi = row.doi,
                 p.title = row.title,
+                p.abstract = row.abstract,
                 p.publication_year = row.publication_year,
                 p.publication_date = row.publication_date,
                 p.language = row.language,
@@ -481,6 +497,7 @@ class GraphRepository:
                         .openalex_id,
                         .doi,
                         .title,
+                        .abstract,
                         .publication_year,
                         .publication_date,
                         .language,
@@ -548,38 +565,53 @@ class GraphRepository:
 
     @tracer.start_as_current_span("graph.search_papers")
     async def search_papers(self, query: str, limit: int = 5) -> list[dict]:
+        search_tokens = search_query_tokens(query)
+        if not search_tokens:
+            return []
+
         async with self.db.session() as session:
             result = await session.run(
                 """
-                WITH toLower($search_query) AS search_query
+                WITH $search_tokens AS search_tokens
                 MATCH (p:Paper)
                 OPTIONAL MATCH (p)-[:HAS_TOPIC|PRIMARY_TOPIC]->(t:Topic)
                 OPTIONAL MATCH (p)-[:PUBLISHED_IN]->(s:Source)
                 WITH p, collect(DISTINCT t.display_name) AS topics,
-                     collect(DISTINCT s.display_name) AS sources, search_query
-                WHERE toLower(coalesce(p.title, "")) CONTAINS search_query
-                   OR any(topic IN topics WHERE toLower(coalesce(topic, "")) CONTAINS search_query)
-                   OR any(
-                       source IN sources
-                       WHERE toLower(coalesce(source, "")) CONTAINS search_query
-                   )
+                     collect(DISTINCT s.display_name) AS sources, search_tokens
+                WITH p, topics, sources,
+                     size([
+                         token IN search_tokens
+                         WHERE toLower(coalesce(p.title, "")) CONTAINS token
+                            OR toLower(coalesce(p.abstract, "")) CONTAINS token
+                            OR any(
+                                topic IN topics
+                                WHERE toLower(coalesce(topic, "")) CONTAINS token
+                            )
+                            OR any(
+                                source IN sources
+                                WHERE toLower(coalesce(source, "")) CONTAINS token
+                            )
+                     ]) AS score
+                WHERE score > 0
                 RETURN
                     p {
                         .openalex_id,
                         .doi,
                         .title,
+                        .abstract,
                         .publication_year,
                         .publication_date,
                         .language,
                         .type,
                         .cited_by_count
                     } AS paper,
+                    score,
                     topics,
                     sources
-                ORDER BY coalesce(p.cited_by_count, 0) DESC
+                ORDER BY score DESC, coalesce(p.cited_by_count, 0) DESC
                 LIMIT $limit
                 """,
-                search_query=query.lower(),
+                search_tokens=search_tokens,
                 limit=limit,
             )
             return await result.data()
@@ -600,3 +632,11 @@ class GraphRepository:
     ) -> None:
         result = await tx.run(query, rows=rows)
         await result.consume()
+
+
+def search_query_tokens(query: str) -> list[str]:
+    return [
+        token
+        for token in query.lower().replace("-", " ").replace("_", " ").split()
+        if len(token) > 2
+    ]
