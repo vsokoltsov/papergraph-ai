@@ -13,13 +13,5 @@ wheels/
 # Local secrets
 .env
 
-# Local vector database storage
-qdrant_storage/
-
-# Local monitoring storage
-grafana_storage/
-prometheus_storage/
-tempo_storage/
-
 # Local migration state
 alembic_state.db
