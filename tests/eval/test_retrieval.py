@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -13,6 +14,7 @@ from app.eval.retrieval.evaluate import (
     details_to_dataframe,
     evaluate_retriever,
     graph_keyword_retriever,
+    load_dataset,
     normalize_openalex_id,
     qdrant_vector_plus_graph_retriever,
     relevance_list,
@@ -51,6 +53,22 @@ def test_relevance_list() -> None:
         retrieved_openalex_ids=["W2", "W1"],
         k=2,
     ) == [0, 1]
+
+
+def test_committed_dataset_contains_paraphrase_and_multi_document_queries() -> None:
+    dataset = [
+        item
+        for item in load_dataset(
+            Path(__file__).parents[2] / "app" / "eval" / "retrieval" / "dataset.json"
+        )
+    ]
+
+    assert len(dataset) >= 10
+    assert any(len(item.expected_openalex_ids) > 1 for item in dataset)
+    assert any("hallucinations" in item.question for item in dataset)
+    assert any(
+        "connected to clinical or biomedical applications" in item.question for item in dataset
+    )
 
 
 @pytest.mark.asyncio

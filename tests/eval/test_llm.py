@@ -12,6 +12,7 @@ from app.eval.llm.utils import (
     extract_tool_calls,
     generate_agent_answers,
     judge_agent_answers,
+    load_dataset,
     render_results,
     results_to_dataframe,
     summary_to_dataframe,
@@ -41,6 +42,16 @@ def test_extract_tool_calls_keeps_tool_name_and_arguments() -> None:
             "arguments": {"query": "graph rag", "limit": 5},
         }
     ]
+
+
+def test_committed_dataset_contains_comparison_and_graph_context_questions() -> None:
+    dataset = load_dataset(Path(__file__).parents[2] / "app" / "eval" / "llm" / "llm_dataset.json")
+    questions = [item.question for item in dataset]
+
+    assert len(dataset) >= 10
+    assert any("Compare" in question for question in questions)
+    assert any("share a focus" in question for question in questions)
+    assert any("outside biomedicine" in question for question in questions)
 
 
 def test_agent_judge_prompt_contains_answer_and_trajectory_inputs() -> None:

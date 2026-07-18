@@ -1,7 +1,7 @@
 [
   {
-    "question": "How does the patient portal emergency triage paper use knowledge graph based RAG?",
-    "answer_orig": "The paper uses a knowledge graph built from a triage book with 225 protocols to retrieve relevant emergency-care information for an LLM. It compares prompt-only, naive RAG, local knowledge graph search, and global knowledge graph search, with the global KG-RAG approach reported as the strongest triage method.",
+    "question": "Which papers discuss using external structured knowledge to make biomedical LLM answers more trustworthy, and how do their goals differ?",
+    "answer_orig": "The relevant papers are the patient portal emergency triage paper, Biomedical knowledge graph-optimized prompt generation for large language models, and Almanac. The triage paper uses a knowledge graph of 225 emergency-care protocols to identify patient messages needing urgent care. The biomedical KG-RAG prompt paper uses the SPOKE biomedical knowledge graph to ground generated responses, provide provenance and statistical evidence when available, and reduce token use. Almanac focuses on retrieval-augmented language models for clinical medicine more broadly.",
     "document": "https://openalex.org/W4409386825"
   },
   {
@@ -10,24 +10,24 @@
     "document": "https://openalex.org/W4409386825"
   },
   {
+    "question": "Which retrieved papers share a focus on graph-based retrieval rather than plain chunk retrieval?",
+    "answer_orig": "The GraphRAG survey, the engineering context-aware KG-RAG paper, the patient portal emergency triage paper, the Nanjing Yunjin QA paper, and the biomedical KG-RAG prompt generation paper all emphasize graph-based or knowledge-graph-based retrieval. They contrast graph structure with simpler retrieval over isolated chunks or plain text.",
+    "document": "https://openalex.org/W4416379250"
+  },
+  {
     "question": "Why does the Nanjing Yunjin QA system combine knowledge graphs with retrieval augmented generation?",
     "answer_orig": "The system combines knowledge graphs with retrieval augmented generation because the domain knowledge is specialized, text-heavy, and difficult to convert into predefined entities and relations. RAG and vectorized text help handle ambiguous or complex natural language questions that are difficult for knowledge graph retrieval alone.",
     "document": "https://openalex.org/W4394619840"
   },
   {
-    "question": "What role does ROBERTA play in the Nanjing Yunjin knowledge graph RAG system?",
-    "answer_orig": "ROBERTA is used to vectorize Nanjing Yunjin textual information so the system can capture semantic meaning in the domain text and combine that semantic retrieval with knowledge graph and retrieval augmented generation techniques.",
+    "question": "Compare the engineering KG-RAG paper and the GraphRAG survey on why graph structure matters.",
+    "answer_orig": "The engineering paper argues that fixed-size chunk retrieval is insufficient for engineering code, standards, and design documents because important technical information is semantically linked across sources. The GraphRAG survey gives the broader framing: GraphRAG uses structural information across entities for more precise and comprehensive retrieval and more accurate, context-aware generation.",
+    "document": "https://openalex.org/W4416402923"
+  },
+  {
+    "question": "Which paper is about cultural heritage question answering, and what role does semantic vectorization play there?",
+    "answer_orig": "The Nanjing Yunjin intelligent question-answering paper is about cultural heritage and traditional Chinese silk weaving knowledge. It uses ROBERTA to vectorize Nanjing Yunjin textual information so the system can capture semantic meaning and combine that retrieval with knowledge graphs and retrieval augmented generation.",
     "document": "https://openalex.org/W4394619840"
-  },
-  {
-    "question": "What problem does the engineering Graph RAG paper identify with traditional chunk based RAG?",
-    "answer_orig": "The paper says traditional RAG is limited by isolated fixed-size chunks and is not well equipped to traverse semantically linked technical information. This is a problem for engineering code, standards, and design documents where relationships across information are important.",
-    "document": "https://openalex.org/W4416402923"
-  },
-  {
-    "question": "What does the engineering context-aware KG-RAG framework aim to improve?",
-    "answer_orig": "It aims to improve the technical accuracy and factual consistency of LLM answers for engineering code, standards, and design documents by using context-aware and knowledge graph based retrieval augmented generation instead of relying only on isolated chunks.",
-    "document": "https://openalex.org/W4416402923"
   },
   {
     "question": "How does the biomedical KG-RAG prompt generation paper reduce token consumption?",
@@ -35,9 +35,9 @@
     "document": "https://openalex.org/W4402567773"
   },
   {
-    "question": "What evidence does the biomedical KG-RAG paper use to support answer trustworthiness?",
-    "answer_orig": "The paper emphasizes that KG-RAG grounds generated biomedical responses in established knowledge from the SPOKE biomedical knowledge graph and can provide provenance and statistical evidence when available.",
-    "document": "https://openalex.org/W4402567773"
+    "question": "Which papers should I read to understand GraphRAG research directions and real domain applications?",
+    "answer_orig": "The Graph Retrieval-Augmented Generation survey is the main paper for research directions because it reviews methodology, tasks, applications, evaluation, and industrial use cases. For domain applications, useful examples include the patient portal emergency triage paper in clinical messaging, the biomedical KG-RAG prompt generation paper in biomedicine, the engineering context-aware KG-RAG paper in engineering standards, and the Nanjing Yunjin QA paper in cultural heritage.",
+    "document": "https://openalex.org/W4416379250"
   },
   {
     "question": "What workflow stages does the Graph Retrieval-Augmented Generation survey formalize?",
@@ -45,8 +45,8 @@
     "document": "https://openalex.org/W4416379250"
   },
   {
-    "question": "Why does the GraphRAG survey argue graph structure is useful for RAG?",
-    "answer_orig": "The survey argues that ordinary RAG struggles with complex relationships among entities in databases, while GraphRAG uses structural information across entities to support more precise, comprehensive retrieval and more accurate, context-aware responses.",
-    "document": "https://openalex.org/W4416379250"
+    "question": "Across the ingested papers, where is Graph RAG used outside biomedicine?",
+    "answer_orig": "Graph RAG is used outside biomedicine in the Nanjing Yunjin intelligent question-answering system for cultural heritage and traditional silk weaving knowledge, and in the engineering context-aware KG-RAG paper for engineering code, technical standards, and design documents.",
+    "document": "https://openalex.org/W4394619840"
   }
 ]

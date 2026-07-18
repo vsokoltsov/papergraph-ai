@@ -1,74 +1,96 @@
 [
   {
-    "question": "knowledge graph based retrieval augmented generation for patient portal emergency triage",
+    "question": "Which papers discuss using external structured knowledge to make biomedical LLM answers more trustworthy?",
+    "expected_openalex_ids": [
+      "https://openalex.org/W4409386825",
+      "https://openalex.org/W4402567773"
+    ]
+  },
+  {
+    "question": "Which papers discuss reducing hallucinations or improving factual consistency with graph grounded retrieval?",
+    "expected_openalex_ids": [
+      "https://openalex.org/W4416379250",
+      "https://openalex.org/W4402567773",
+      "https://openalex.org/W4416402923"
+    ]
+  },
+  {
+    "question": "Find work about triaging urgent clinical messages with an LLM and graph retrieved medical protocols.",
     "expected_openalex_ids": [
       "https://openalex.org/W4409386825"
     ]
   },
   {
-    "question": "global graph search for detecting emergencies in patient portal messages",
+    "question": "Which publication compares local graph retrieval with broader community based graph retrieval?",
     "expected_openalex_ids": [
       "https://openalex.org/W4409386825"
     ]
   },
   {
-    "question": "Nanjing Yunjin question answering knowledge graph retrieval augmented generation",
+    "question": "Find papers about domain question answering systems that combine semantic text retrieval with a knowledge graph.",
+    "expected_openalex_ids": [
+      "https://openalex.org/W4394619840",
+      "https://openalex.org/W4416402923"
+    ]
+  },
+  {
+    "question": "Which paper applies graph augmented question answering to cultural heritage or traditional craft knowledge?",
     "expected_openalex_ids": [
       "https://openalex.org/W4394619840"
     ]
   },
   {
-    "question": "traditional Chinese silk weaving question answering with ROBERTA vectors and knowledge graphs",
+    "question": "Which papers critique isolated chunk retrieval for domains where technical facts are linked across documents?",
     "expected_openalex_ids": [
+      "https://openalex.org/W4416402923",
+      "https://openalex.org/W4416379250"
+    ]
+  },
+  {
+    "question": "Find work on engineering standards where graph context helps interpret connected technical requirements.",
+    "expected_openalex_ids": [
+      "https://openalex.org/W4416402923"
+    ]
+  },
+  {
+    "question": "Which biomedical KG-RAG paper focuses on pruning graph context to lower prompt cost?",
+    "expected_openalex_ids": [
+      "https://openalex.org/W4402567773"
+    ]
+  },
+  {
+    "question": "Find papers that discuss provenance or evidence support for biomedical retrieval augmented generation.",
+    "expected_openalex_ids": [
+      "https://openalex.org/W4402567773",
+      "https://openalex.org/W4391221150"
+    ]
+  },
+  {
+    "question": "Which survey organizes GraphRAG into indexing retrieval and generation stages?",
+    "expected_openalex_ids": [
+      "https://openalex.org/W4416379250"
+    ]
+  },
+  {
+    "question": "Find the survey paper that reviews GraphRAG downstream tasks evaluation methods and industrial use cases.",
+    "expected_openalex_ids": [
+      "https://openalex.org/W4416379250"
+    ]
+  },
+  {
+    "question": "Which retrieved papers are connected to clinical or biomedical applications of retrieval augmented generation?",
+    "expected_openalex_ids": [
+      "https://openalex.org/W4409386825",
+      "https://openalex.org/W4402567773",
+      "https://openalex.org/W4391221150"
+    ]
+  },
+  {
+    "question": "Which papers should be compared to understand how graph based retrieval differs across medicine engineering and cultural heritage?",
+    "expected_openalex_ids": [
+      "https://openalex.org/W4409386825",
+      "https://openalex.org/W4416402923",
       "https://openalex.org/W4394619840"
-    ]
-  },
-  {
-    "question": "context aware knowledge graph based retrieval augmented generation for engineering standards",
-    "expected_openalex_ids": [
-      "https://openalex.org/W4416402923"
-    ]
-  },
-  {
-    "question": "engineering code technical standards graph based RAG limitations of chunk retrieval",
-    "expected_openalex_ids": [
-      "https://openalex.org/W4416402923"
-    ]
-  },
-  {
-    "question": "biomedical knowledge graph optimized prompt generation for large language models",
-    "expected_openalex_ids": [
-      "https://openalex.org/W4402567773"
-    ]
-  },
-  {
-    "question": "SPOKE biomedical knowledge graph prompt generation token reduction RAG",
-    "expected_openalex_ids": [
-      "https://openalex.org/W4402567773"
-    ]
-  },
-  {
-    "question": "Graph Retrieval-Augmented Generation survey graph based indexing graph guided retrieval graph enhanced generation",
-    "expected_openalex_ids": [
-      "https://openalex.org/W4416379250"
-    ]
-  },
-  {
-    "question": "GraphRAG survey research directions evaluation methodologies industrial use cases",
-    "expected_openalex_ids": [
-      "https://openalex.org/W4416379250"
-    ]
-  },
-  {
-    "question": "retrieval augmented language models for clinical medicine Almanac",
-    "expected_openalex_ids": [
-      "https://openalex.org/W4391221150"
-    ]
-  },
-  {
-    "question": "clinical medicine retrieval augmented language model evidence support",
-    "expected_openalex_ids": [
-      "https://openalex.org/W4391221150"
     ]
   }
 ]
