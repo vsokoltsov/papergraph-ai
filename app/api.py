@@ -1,16 +1,21 @@
 from collections.abc import Awaitable, Callable
-from typing import Any
+from functools import lru_cache
+from time import monotonic
+from typing import Any, Protocol
+from uuid import uuid4
 
 from fastapi import FastAPI
 from opentelemetry import trace
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from app.agents.research import AgentEvent, ResearchAgent, create_research_tools
 from app.clients.openalex import OpenAlexClient
 from app.db.neo4j import get_neo4j_driver
+from app.db.postgres import get_postgres_engine
 from app.db.qdrant import get_qdrant_client
 from app.logging import configure_logging
-from app.metrics import instrument_prometheus
+from app.metrics import estimate_tokens, instrument_prometheus
+from app.repositories.feedback import AgentRunRecord, FeedbackRecord, FeedbackRepository
 from app.repositories.graph import GraphRepository
 from app.repositories.vector import VectorRepository
 from app.services.papers import PapersService
@@ -21,17 +26,33 @@ tracer = trace.get_tracer(__name__)
 AgentRunner = Callable[[str], Awaitable[dict[str, Any]]]
 
 
+class FeedbackWriter(Protocol):
+    async def save_feedback(self, record: FeedbackRecord) -> None: ...
+
+
 class AgentRunRequest(BaseModel):
     question: str
 
 
 class AgentRunResponse(BaseModel):
+    run_id: str
     answer: str
     events: list[AgentEvent]
 
 
+class FeedbackRequest(BaseModel):
+    run_id: str
+    rating: str = Field(pattern="^(thumbs_up|thumbs_down)$")
+    comment: str | None = None
+
+
+class FeedbackResponse(BaseModel):
+    status: str
+
+
 def create_app(
     agent_runner: AgentRunner | None = None,
+    feedback_repository: FeedbackWriter | None = None,
     settings: Settings | None = None,
 ) -> FastAPI:
     if agent_runner is None:
@@ -55,6 +76,18 @@ def create_app(
         result = await runner(request.question)
         return AgentRunResponse.model_validate(result)
 
+    @app.post("/feedback")
+    async def create_feedback(request: FeedbackRequest) -> FeedbackResponse:
+        repository = feedback_repository or get_feedback_repository()
+        await repository.save_feedback(
+            FeedbackRecord(
+                run_id=request.run_id,
+                rating=request.rating,
+                comment=request.comment,
+            )
+        )
+        return FeedbackResponse(status="ok")
+
     return app
 
 
@@ -62,6 +95,8 @@ def create_app(
 async def run_research_agent(question: str) -> dict[str, Any]:
     settings = get_settings()
     events: list[AgentEvent] = []
+    run_id = str(uuid4())
+    start = monotonic()
 
     openalex_client = OpenAlexClient(api_key=settings.OPENALEX_API_KEY)
     qdrant_db = get_qdrant_client(url=settings.QDRANT_URL)
@@ -94,7 +129,26 @@ async def run_research_agent(question: str) -> dict[str, Any]:
     )
 
     answer = await agent.run(question)
-    return {"answer": answer, "events": events}
+    prompt_tokens = estimate_tokens(question, settings.LLM_MODEL)
+    completion_tokens = estimate_tokens(answer, settings.LLM_MODEL)
+    await get_feedback_repository().save_agent_run(
+        AgentRunRecord(
+            run_id=run_id,
+            question=question,
+            answer=str(answer),
+            prompt_tokens=prompt_tokens,
+            completion_tokens=completion_tokens,
+            total_tokens=prompt_tokens + completion_tokens,
+            duration_seconds=monotonic() - start,
+        )
+    )
+    return {"run_id": run_id, "answer": answer, "events": events}
+
+
+@lru_cache(maxsize=1)
+def get_feedback_repository() -> FeedbackRepository:
+    settings = get_settings()
+    return FeedbackRepository(db=get_postgres_engine(settings.POSTGRES_DATABASE_URL))
 
 
 app = create_app()
