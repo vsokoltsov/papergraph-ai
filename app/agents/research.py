@@ -11,6 +11,14 @@ from langchain_openai import ChatOpenAI
 from opentelemetry import trace
 
 from app.clients.openalex import OpenAlexArticle
+from app.metrics import (
+    AGENT_RUN_TOKENS,
+    AGENT_TOKENS_TOTAL,
+    estimate_tokens,
+    record_agent_tool_results,
+    track_agent_run,
+    track_agent_tool,
+)
 
 tracer = trace.get_tracer(__name__)
 logger = structlog.get_logger(__name__)
@@ -102,6 +110,7 @@ def create_research_tools(
     def is_enabled(tool_name: str) -> bool:
         return enabled_tools is None or tool_name in enabled_tools
 
+    @track_agent_tool("search_openalex")
     async def search_openalex(query: str, limit: int = 5) -> str:
         """Search OpenAlex for papers and return short metadata previews."""
         _emit_tool_event(
@@ -113,6 +122,7 @@ def create_research_tools(
             },
         )
         articles = await papers_service.get_articles(query=query, limit=limit)
+        record_agent_tool_results("search_openalex", len(articles))
         _emit_tool_event(
             emit_event,
             {
@@ -123,6 +133,7 @@ def create_research_tools(
         )
         return _to_json([_article_preview(article) for article in articles])
 
+    @track_agent_tool("ingest_papers")
     async def ingest_papers(query: str, limit: int = 5) -> str:
         """Search OpenAlex and store matching papers in vector and graph databases."""
         _emit_tool_event(
@@ -135,6 +146,7 @@ def create_research_tools(
         )
         articles = await papers_service.get_articles(query=query, limit=limit)
         await papers_service.insert_articles(articles=articles)
+        record_agent_tool_results("ingest_papers", len(articles))
         _emit_tool_event(
             emit_event,
             {
@@ -150,6 +162,7 @@ def create_research_tools(
             }
         )
 
+    @track_agent_tool("search_vector_database")
     async def search_vector_database(query: str, limit: int = 5) -> str:
         """Search stored paper titles and abstracts in the vector database."""
         _emit_tool_event(
@@ -161,6 +174,7 @@ def create_research_tools(
             },
         )
         results = await vector_repository.search_papers(query=query, limit=limit)
+        record_agent_tool_results("search_vector_database", len(results))
         _emit_tool_event(
             emit_event,
             {
@@ -171,6 +185,7 @@ def create_research_tools(
         )
         return _to_json(results)
 
+    @track_agent_tool("search_graph_database")
     async def search_graph_database(query: str, limit: int = 5) -> str:
         """Search stored paper metadata, topics, and sources in the graph database."""
         _emit_tool_event(
@@ -182,6 +197,7 @@ def create_research_tools(
             },
         )
         results = await graph_repository.search_papers(query=query, limit=limit)
+        record_agent_tool_results("search_graph_database", len(results))
         _emit_tool_event(
             emit_event,
             {
@@ -192,6 +208,7 @@ def create_research_tools(
         )
         return _to_json(results)
 
+    @track_agent_tool("get_graph_context")
     async def get_graph_context(openalex_ids: list[str]) -> str:
         """Get graph context for OpenAlex paper IDs from Neo4j."""
         _emit_tool_event(
@@ -203,6 +220,7 @@ def create_research_tools(
             },
         )
         context = await graph_repository.get_paper_context(openalex_ids=openalex_ids)
+        record_agent_tool_results("get_graph_context", len(context))
         _emit_tool_event(
             emit_event,
             {
@@ -233,6 +251,7 @@ class ResearchAgent:
     system_prompt: str | None = None
     events: list[AgentEvent] = field(default_factory=list)
 
+    @track_agent_run
     @tracer.start_as_current_span("agent.run")
     async def run(self, question: str) -> str:
         self._emit({"type": "run_start", "input": {"question": question}})
@@ -262,6 +281,12 @@ class ResearchAgent:
         result = await agent.ainvoke({"messages": [HumanMessage(content=question)]})
         messages = result["messages"]
         answer = messages[-1].content
+        record_agent_tokens(
+            messages=messages,
+            question=question,
+            answer=answer,
+            model_name=self.model_name,
+        )
         self._emit({"type": "run_end", "output": {"answer": answer}})
         return answer
 
@@ -279,3 +304,26 @@ def _emit_tool_event(
     log_agent_event(event)
     if emit_event:
         emit_event(event)
+
+
+def record_agent_tokens(
+    messages: list[Any],
+    question: str,
+    answer: Any,
+    model_name: str,
+) -> None:
+    prompt_text = [question]
+    for message in messages[:-1]:
+        prompt_text.append(getattr(message, "content", ""))
+
+    prompt_tokens = estimate_tokens(prompt_text, model_name)
+    completion_tokens = estimate_tokens(answer, model_name)
+    total_tokens = prompt_tokens + completion_tokens
+
+    for token_type, value in {
+        "prompt": prompt_tokens,
+        "completion": completion_tokens,
+        "total": total_tokens,
+    }.items():
+        AGENT_RUN_TOKENS.labels(token_type=token_type).observe(value)
+        AGENT_TOKENS_TOTAL.labels(token_type=token_type).inc(value)
