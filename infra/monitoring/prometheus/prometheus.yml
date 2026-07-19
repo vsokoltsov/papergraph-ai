@@ -8,9 +8,14 @@ scrape_configs:
       - targets:
           - localhost:9090
 
-  # Add the app metrics endpoint here once the API exposes /metrics.
-  # Example:
-  # - job_name: papergraph-api
-  #   static_configs:
-  #     - targets:
-  #         - api:8000
+  - job_name: papergraph-api
+    metrics_path: /metrics
+    static_configs:
+      - targets:
+          - api:8000
+
+  - job_name: pushgateway
+    honor_labels: true
+    static_configs:
+      - targets:
+          - pushgateway:9091
