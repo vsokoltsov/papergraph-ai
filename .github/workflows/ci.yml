@@ -108,6 +108,8 @@ jobs:
       NEO4J_URI: bolt://localhost:7687
       NEO4J_USER: neo4j
       NEO4J_PASSWORD: password
+      POSTGRES_DATABASE_URL: postgresql+asyncpg://papergraph:papergraph@localhost:5432/papergraph
+      POSTGRES_SYNC_DATABASE_URL: postgresql+psycopg://papergraph:papergraph@localhost:5432/papergraph
       ONNXRUNTIME_LOG_SEVERITY_LEVEL: "3"
       ORT_LOGGING_LEVEL: ERROR
 
@@ -129,7 +131,7 @@ jobs:
         run: touch .env
 
       - name: Start retrieval services
-        run: docker compose up -d qdrant neo4j
+        run: docker compose up -d qdrant neo4j postgres
 
       - name: Wait for retrieval services
         run: |
@@ -153,6 +155,19 @@ jobs:
 
             if [ "$attempt" -eq 60 ]; then
               echo "Neo4j did not become ready"
+              exit 1
+            fi
+
+            sleep 2
+          done
+
+          for attempt in {1..60}; do
+            if docker compose exec -T postgres pg_isready -U papergraph -d papergraph > /dev/null; then
+              break
+            fi
+
+            if [ "$attempt" -eq 60 ]; then
+              echo "PostgreSQL did not become ready"
               exit 1
             fi
 
@@ -200,6 +215,8 @@ jobs:
       NEO4J_URI: bolt://localhost:7687
       NEO4J_USER: neo4j
       NEO4J_PASSWORD: password
+      POSTGRES_DATABASE_URL: postgresql+asyncpg://papergraph:papergraph@localhost:5432/papergraph
+      POSTGRES_SYNC_DATABASE_URL: postgresql+psycopg://papergraph:papergraph@localhost:5432/papergraph
       ONNXRUNTIME_LOG_SEVERITY_LEVEL: "3"
       ORT_LOGGING_LEVEL: ERROR
       OTEL_TRACING_ENABLED: false
@@ -222,7 +239,7 @@ jobs:
         run: touch .env
 
       - name: Start retrieval services
-        run: docker compose up -d qdrant neo4j
+        run: docker compose up -d qdrant neo4j postgres
 
       - name: Wait for retrieval services
         run: |
@@ -246,6 +263,19 @@ jobs:
 
             if [ "$attempt" -eq 60 ]; then
               echo "Neo4j did not become ready"
+              exit 1
+            fi
+
+            sleep 2
+          done
+
+          for attempt in {1..60}; do
+            if docker compose exec -T postgres pg_isready -U papergraph -d papergraph > /dev/null; then
+              break
+            fi
+
+            if [ "$attempt" -eq 60 ]; then
+              echo "PostgreSQL did not become ready"
               exit 1
             fi
 
