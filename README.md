@@ -104,6 +104,125 @@ Run checks:
 make check
 ```
 
+## 🔌 API Contracts
+
+Base URL for local development: `http://localhost:8000`.
+
+### `GET /health`
+
+Checks whether the API process is running.
+
+Response:
+
+```json
+{
+  "status": "ok"
+}
+```
+
+### `POST /agent/runs`
+
+Runs the research agent and returns the complete answer after the run finishes.
+
+Request:
+
+```json
+{
+  "question": "Which papers discuss graph retrieval augmented generation?"
+}
+```
+
+Response:
+
+```json
+{
+  "run_id": "29611bb8-d0cd-4546-90e4-5cc39b405b58",
+  "answer": "Summary...\n\nKey papers...",
+  "events": [
+    {
+      "type": "run_start",
+      "input": {
+        "question": "Which papers discuss graph retrieval augmented generation?"
+      }
+    },
+    {
+      "type": "tool_start",
+      "tool": "search_vector_database",
+      "input": {
+        "query": "graph retrieval augmented generation",
+        "limit": 5
+      }
+    },
+    {
+      "type": "tool_end",
+      "tool": "search_vector_database",
+      "output": {
+        "count": 5
+      }
+    },
+    {
+      "type": "run_end",
+      "output": {
+        "answer": "Summary...\n\nKey papers..."
+      }
+    }
+  ]
+}
+```
+
+### `POST /agent/runs/stream`
+
+Runs the research agent and streams progress as Server-Sent Events. The request body is the same
+as `POST /agent/runs`.
+
+Request:
+
+```json
+{
+  "question": "Which papers discuss graph retrieval augmented generation?"
+}
+```
+
+Each streamed item is emitted as an SSE `data:` event containing JSON:
+
+```text
+data: {"type":"status","message":"Running agent"}
+
+data: {"type":"agent_event","event":{"type":"tool_start","tool":"search_vector_database","input":{"query":"graph retrieval augmented generation","limit":5}}}
+
+data: {"type":"done","run_id":"29611bb8-d0cd-4546-90e4-5cc39b405b58","answer":"Summary...\n\nKey papers...","events":[...]}
+```
+
+On failure the stream emits:
+
+```text
+data: {"type":"error","message":"Error message"}
+```
+
+### `POST /feedback`
+
+Stores user feedback for a completed agent run.
+
+Request:
+
+```json
+{
+  "run_id": "29611bb8-d0cd-4546-90e4-5cc39b405b58",
+  "rating": "thumbs_up",
+  "comment": "Useful answer with relevant papers."
+}
+```
+
+`rating` must be either `thumbs_up` or `thumbs_down`. `comment` is optional.
+
+Response:
+
+```json
+{
+  "status": "ok"
+}
+```
+
 ## LLM Evaluation
 
 The project uses the course-style LLM evaluation flow:
