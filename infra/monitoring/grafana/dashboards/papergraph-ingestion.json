@@ -22,48 +22,28 @@
       "error": false,
       "fieldConfig": {
         "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "axisSoftMax": null,
-            "axisSoftMin": null,
-            "barAlignment": 0,
-            "drawStyle": "line",
-            "fillOpacity": 0,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "log": 2,
-              "type": "linear"
-            },
-            "showPoints": "auto",
-            "spanNulls": false,
-            "stacking": {},
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "decimals": null,
-          "mappings": [],
-          "max": null,
-          "min": null,
           "thresholds": {
             "mode": "absolute",
-            "steps": []
-          },
-          "unit": ""
-        },
-        "overrides": []
+            "steps": [
+              {
+                "color": "green",
+                "index": 0,
+                "line": true,
+                "op": "gt",
+                "value": "null",
+                "yaxis": "left"
+              },
+              {
+                "color": "red",
+                "index": 1,
+                "line": true,
+                "op": "gt",
+                "value": 80.0,
+                "yaxis": "left"
+              }
+            ]
+          }
+        }
       },
       "gridPos": {
         "h": 8,
@@ -80,15 +60,45 @@
       "maxPerRow": null,
       "minSpan": null,
       "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom"
+        "displayMode": "gradient",
+        "fieldOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "defaults": {
+            "decimals": null,
+            "links": [],
+            "max": 100,
+            "min": 0,
+            "title": null,
+            "unit": "none"
+          },
+          "limit": null,
+          "mappings": [],
+          "override": {},
+          "thresholds": [
+            {
+              "color": "green",
+              "index": 0,
+              "line": true,
+              "op": "gt",
+              "value": "null",
+              "yaxis": "left"
+            },
+            {
+              "color": "red",
+              "index": 1,
+              "line": true,
+              "op": "gt",
+              "value": 80.0,
+              "yaxis": "left"
+            }
+          ],
+          "values": false
         },
-        "tooltip": {
-          "mode": "single",
-          "sort": "none"
-        }
+        "orientation": "horizontal",
+        "showThresholdLabels": false,
+        "showThresholdMarkers": true
       },
       "repeat": null,
       "repeatDirection": null,
@@ -115,7 +125,7 @@
       "title": "OpenAlex Articles Returned",
       "transformations": [],
       "transparent": false,
-      "type": "timeseries"
+      "type": "bargauge"
     },
     {
       "cacheTimeout": null,
@@ -128,48 +138,28 @@
       "error": false,
       "fieldConfig": {
         "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "axisSoftMax": null,
-            "axisSoftMin": null,
-            "barAlignment": 0,
-            "drawStyle": "line",
-            "fillOpacity": 0,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "log": 2,
-              "type": "linear"
-            },
-            "showPoints": "auto",
-            "spanNulls": false,
-            "stacking": {},
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "decimals": null,
-          "mappings": [],
-          "max": null,
-          "min": null,
           "thresholds": {
             "mode": "absolute",
-            "steps": []
-          },
-          "unit": ""
-        },
-        "overrides": []
+            "steps": [
+              {
+                "color": "green",
+                "index": 0,
+                "line": true,
+                "op": "gt",
+                "value": "null",
+                "yaxis": "left"
+              },
+              {
+                "color": "red",
+                "index": 1,
+                "line": true,
+                "op": "gt",
+                "value": 80.0,
+                "yaxis": "left"
+              }
+            ]
+          }
+        }
       },
       "gridPos": {
         "h": 8,
@@ -186,15 +176,45 @@
       "maxPerRow": null,
       "minSpan": null,
       "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom"
+        "displayMode": "gradient",
+        "fieldOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "defaults": {
+            "decimals": null,
+            "links": [],
+            "max": 100,
+            "min": 0,
+            "title": null,
+            "unit": "none"
+          },
+          "limit": null,
+          "mappings": [],
+          "override": {},
+          "thresholds": [
+            {
+              "color": "green",
+              "index": 0,
+              "line": true,
+              "op": "gt",
+              "value": "null",
+              "yaxis": "left"
+            },
+            {
+              "color": "red",
+              "index": 1,
+              "line": true,
+              "op": "gt",
+              "value": 80.0,
+              "yaxis": "left"
+            }
+          ],
+          "values": false
         },
-        "tooltip": {
-          "mode": "single",
-          "sort": "none"
-        }
+        "orientation": "horizontal",
+        "showThresholdLabels": false,
+        "showThresholdMarkers": true
       },
       "repeat": null,
       "repeatDirection": null,
@@ -221,7 +241,7 @@
       "title": "Vector Papers Uploaded",
       "transformations": [],
       "transparent": false,
-      "type": "timeseries"
+      "type": "bargauge"
     },
     {
       "cacheTimeout": null,
@@ -234,48 +254,28 @@
       "error": false,
       "fieldConfig": {
         "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "axisSoftMax": null,
-            "axisSoftMin": null,
-            "barAlignment": 0,
-            "drawStyle": "line",
-            "fillOpacity": 0,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "log": 2,
-              "type": "linear"
-            },
-            "showPoints": "auto",
-            "spanNulls": false,
-            "stacking": {},
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "decimals": null,
-          "mappings": [],
-          "max": null,
-          "min": null,
           "thresholds": {
             "mode": "absolute",
-            "steps": []
-          },
-          "unit": ""
-        },
-        "overrides": []
+            "steps": [
+              {
+                "color": "green",
+                "index": 0,
+                "line": true,
+                "op": "gt",
+                "value": "null",
+                "yaxis": "left"
+              },
+              {
+                "color": "red",
+                "index": 1,
+                "line": true,
+                "op": "gt",
+                "value": 80.0,
+                "yaxis": "left"
+              }
+            ]
+          }
+        }
       },
       "gridPos": {
         "h": 8,
@@ -292,15 +292,45 @@
       "maxPerRow": null,
       "minSpan": null,
       "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom"
+        "displayMode": "gradient",
+        "fieldOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "defaults": {
+            "decimals": null,
+            "links": [],
+            "max": 100,
+            "min": 0,
+            "title": null,
+            "unit": "none"
+          },
+          "limit": null,
+          "mappings": [],
+          "override": {},
+          "thresholds": [
+            {
+              "color": "green",
+              "index": 0,
+              "line": true,
+              "op": "gt",
+              "value": "null",
+              "yaxis": "left"
+            },
+            {
+              "color": "red",
+              "index": 1,
+              "line": true,
+              "op": "gt",
+              "value": 80.0,
+              "yaxis": "left"
+            }
+          ],
+          "values": false
         },
-        "tooltip": {
-          "mode": "single",
-          "sort": "none"
-        }
+        "orientation": "horizontal",
+        "showThresholdLabels": false,
+        "showThresholdMarkers": true
       },
       "repeat": null,
       "repeatDirection": null,
@@ -327,7 +357,7 @@
       "title": "Graph Papers Upserted",
       "transformations": [],
       "transparent": false,
-      "type": "timeseries"
+      "type": "bargauge"
     },
     {
       "cacheTimeout": null,
@@ -340,46 +370,16 @@
       "error": false,
       "fieldConfig": {
         "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "axisSoftMax": null,
-            "axisSoftMin": null,
-            "barAlignment": 0,
-            "drawStyle": "line",
-            "fillOpacity": 0,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "log": 2,
-              "type": "linear"
-            },
-            "showPoints": "auto",
-            "spanNulls": false,
-            "stacking": {},
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
+          "color": null,
+          "custom": {},
           "decimals": null,
           "mappings": [],
-          "max": null,
-          "min": null,
+          "noValue": "none",
           "thresholds": {
             "mode": "absolute",
-            "steps": []
+            "steps": ""
           },
-          "unit": ""
+          "unit": "none"
         },
         "overrides": []
       },
@@ -398,15 +398,18 @@
       "maxPerRow": null,
       "minSpan": null,
       "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom"
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
         },
-        "tooltip": {
-          "mode": "single",
-          "sort": "none"
-        }
+        "textMode": "auto"
       },
       "repeat": null,
       "repeatDirection": null,
@@ -433,7 +436,7 @@
       "title": "Ingestion Tool Calls",
       "transformations": [],
       "transparent": false,
-      "type": "timeseries"
+      "type": "stat"
     },
     {
       "cacheTimeout": null,
@@ -446,48 +449,43 @@
       "error": false,
       "fieldConfig": {
         "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "axisSoftMax": null,
-            "axisSoftMin": null,
-            "barAlignment": 0,
-            "drawStyle": "line",
-            "fillOpacity": 0,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "log": 2,
-              "type": "linear"
-            },
-            "showPoints": "auto",
-            "spanNulls": false,
-            "stacking": {},
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
+          "calcs": [
+            "lastNotNull"
+          ],
           "decimals": null,
+          "limit": null,
+          "links": [],
           "mappings": [],
-          "max": null,
-          "min": null,
+          "max": 120,
+          "min": 0,
+          "override": {},
           "thresholds": {
             "mode": "absolute",
-            "steps": []
+            "steps": [
+              {
+                "color": "green",
+                "index": 0,
+                "line": true,
+                "op": "gt",
+                "value": "null",
+                "yaxis": "left"
+              },
+              {
+                "color": "red",
+                "index": 1,
+                "line": true,
+                "op": "gt",
+                "value": 80.0,
+                "yaxis": "left"
+              }
+            ]
           },
-          "unit": "s"
+          "title": null,
+          "unit": "s",
+          "values": false
         },
-        "overrides": []
+        "showThresholdLabels": false,
+        "showThresholdMarkers": true
       },
       "gridPos": {
         "h": 8,
@@ -503,17 +501,6 @@
       "maxDataPoints": 100,
       "maxPerRow": null,
       "minSpan": null,
-      "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom"
-        },
-        "tooltip": {
-          "mode": "single",
-          "sort": "none"
-        }
-      },
       "repeat": null,
       "repeatDirection": null,
       "span": null,
@@ -539,7 +526,7 @@
       "title": "Ingestion Tool p95 Duration",
       "transformations": [],
       "transparent": false,
-      "type": "timeseries"
+      "type": "gauge"
     }
   ],
   "refresh": "10s",
