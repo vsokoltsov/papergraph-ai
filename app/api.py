@@ -10,6 +10,7 @@ from app.clients.openalex import OpenAlexClient
 from app.db.neo4j import get_neo4j_driver
 from app.db.qdrant import get_qdrant_client
 from app.logging import configure_logging
+from app.metrics import instrument_prometheus
 from app.repositories.graph import GraphRepository
 from app.repositories.vector import VectorRepository
 from app.services.papers import PapersService
@@ -39,6 +40,7 @@ def create_app(
         configure_tracing(settings)
 
     app = FastAPI(title="PaperGraph AI")
+    instrument_prometheus(app)
 
     if settings:
         instrument_fastapi_app(app, settings)
