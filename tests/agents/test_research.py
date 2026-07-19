@@ -4,7 +4,12 @@ from typing import Any
 
 import pytest
 
-from app.agents.research import create_research_tools, format_agent_event
+from app.agents.research import (
+    create_research_tools,
+    format_agent_event,
+    rerank_documents,
+    rewrite_search_query,
+)
 from app.clients.openalex import OpenAlexArticle
 
 
@@ -118,6 +123,85 @@ async def test_search_vector_database_tool_returns_matches() -> None:
             "id": "00000000-0000-0000-0000-000000000001",
             "score": 0.9,
             "payload": {"openalex_id": "https://openalex.org/W1"},
+        }
+    ]
+
+
+def test_rewrite_search_query_keeps_retrieval_terms() -> None:
+    assert (
+        rewrite_search_query(
+            "Which papers compare neighborhood-level retrieval with community-level retrieval?"
+        )
+        == "neighborhood level retrieval community"
+    )
+
+
+@pytest.mark.asyncio
+async def test_rewrite_search_query_tool_returns_rewritten_query() -> None:
+    tools, _ = _tools_by_name()
+
+    result = await tools["rewrite_search_query"].ainvoke(
+        {
+            "question": (
+                "Which papers compare neighborhood-level retrieval with community-level retrieval?"
+            )
+        }
+    )
+
+    assert result == "neighborhood level retrieval community"
+
+
+def test_rerank_documents_prioritizes_question_overlap() -> None:
+    documents = [
+        {
+            "score": 0.99,
+            "payload": {"title": "General retrieval augmented generation survey"},
+        },
+        {
+            "score": 0.40,
+            "payload": {
+                "title": "Neighborhood retrieval and community retrieval over medical graph"
+            },
+        },
+    ]
+
+    ranked_documents = rerank_documents(
+        question="community neighborhood retrieval over a medical knowledge graph",
+        documents=documents,
+        limit=2,
+    )
+
+    assert ranked_documents[0]["payload"]["title"] == (
+        "Neighborhood retrieval and community retrieval over medical graph"
+    )
+    assert ranked_documents[0]["rerank_score"] == {
+        "term_overlap": 6,
+        "backend_score": 0.4,
+    }
+
+
+@pytest.mark.asyncio
+async def test_rerank_documents_tool_returns_ranked_documents() -> None:
+    tools, _ = _tools_by_name()
+
+    result = await tools["rerank_documents"].ainvoke(
+        {
+            "question": "graph rag",
+            "documents_json": json.dumps(
+                [
+                    {"score": 0.9, "payload": {"title": "Other paper"}},
+                    {"score": 0.1, "payload": {"title": "Graph RAG"}},
+                ]
+            ),
+            "limit": 1,
+        }
+    )
+
+    assert json.loads(result) == [
+        {
+            "score": 0.1,
+            "payload": {"title": "Graph RAG"},
+            "rerank_score": {"term_overlap": 2, "backend_score": 0.1},
         }
     ]
 

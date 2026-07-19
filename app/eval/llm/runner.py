@@ -79,11 +79,21 @@ def enabled_tools_for_approach(approach: AgentApproach) -> set[str]:
 
     match approach:
         case "vector_only":
-            return {"search_vector_database"}
+            return {"rewrite_search_query", "search_vector_database", "rerank_documents"}
         case "graph_only":
-            return {"search_graph_database", "get_graph_context"}
+            return {
+                "rewrite_search_query",
+                "search_graph_database",
+                "get_graph_context",
+                "rerank_documents",
+            }
         case "vector_plus_graph":
-            return {"search_vector_database", "get_graph_context"}
+            return {
+                "rewrite_search_query",
+                "search_vector_database",
+                "get_graph_context",
+                "rerank_documents",
+            }
 
 
 def system_prompt_for_approach(approach: AgentApproach) -> str:
@@ -113,17 +123,24 @@ def system_prompt_for_approach(approach: AgentApproach) -> str:
 
     match approach:
         case "vector_only":
-            return f"{shared} Use vector database search only. Do not request graph context."
+            return (
+                f"{shared} First rewrite the user question with rewrite_search_query. Use vector "
+                "database search only. Rerank vector results with rerank_documents before "
+                "answering. Do not request graph context."
+            )
         case "graph_only":
             return (
-                f"{shared} Use graph database search and graph context only. Do not use vector "
-                "search. Because Neo4j does not store abstracts, be explicit when the graph "
-                "metadata is insufficient for content-level claims."
+                f"{shared} First rewrite the user question with rewrite_search_query. Use graph "
+                "database search and graph context only. Rerank graph search results with "
+                "rerank_documents before answering. Do not use vector search. Because Neo4j does "
+                "not store abstracts, be explicit when the graph metadata is insufficient for "
+                "content-level claims."
             )
         case "vector_plus_graph":
             return (
-                f"{shared} Always use vector search first to find relevant papers by title and "
-                "abstract. Then inspect graph context for the returned OpenAlex IDs before "
-                "answering, especially for comparisons, topics, sources, authors, institutions, "
-                "and citation relationships."
+                f"{shared} First rewrite the user question with rewrite_search_query. Always use "
+                "vector search first to find relevant papers by title and abstract. Rerank vector "
+                "results with rerank_documents before selecting papers. Then inspect graph context "
+                "for the returned OpenAlex IDs before answering, especially for comparisons, "
+                "topics, sources, authors, institutions, and citation relationships."
             )

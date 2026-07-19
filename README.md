@@ -18,6 +18,21 @@ The main goal is to answer research questions such as:
 The system is built around an automated ingestion pipeline, an agentic retrieval layer, evaluation
 scripts, feedback collection, and Grafana monitoring dashboards.
 
+## 🔎 Retrieval Features
+
+PaperGraph AI implements the bonus retrieval features explicitly:
+
+- **Hybrid search**: the evaluated `vector_plus_graph` approach retrieves semantic matches from
+  Qdrant first, then enriches selected OpenAlex papers with Neo4j graph context.
+- **User query rewriting**: the agent has a `rewrite_search_query` tool that converts a natural
+  language question into a compact retrieval query before database search.
+- **Document re-ranking**: the agent has a `rerank_documents` tool that reorders retrieved
+  candidates using question-term overlap plus the backend retrieval score.
+
+The LLM evaluation compares `vector_only`, `graph_only`, and `vector_plus_graph`, while the
+retrieval evaluation compares Qdrant vector search, Neo4j graph search, and the combined
+vector-plus-graph strategy.
+
 ## 💬 UI Interface
 
 The user interface is a Streamlit chat app.
