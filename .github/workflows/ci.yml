@@ -175,7 +175,7 @@ jobs:
           done
 
       - name: Run migrations
-        run: uv run alembic upgrade head
+        run: uv run alembic upgrade heads
 
       - name: Seed retrieval databases
         run: uv run python -m app.cli "knowledge graph based retrieval augmented generation" --limit 10
@@ -283,7 +283,7 @@ jobs:
           done
 
       - name: Run migrations
-        run: uv run alembic upgrade head
+        run: uv run alembic upgrade heads
 
       - name: Seed evaluation databases
         run: uv run python -m app.cli "knowledge graph based retrieval augmented generation" --limit 10
