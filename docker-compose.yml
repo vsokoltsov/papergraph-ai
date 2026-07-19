@@ -10,10 +10,13 @@ services:
     environment:
       QDRANT_URL: http://qdrant:6333
       NEO4J_URI: bolt://neo4j:7687
+      POSTGRES_DATABASE_URL: postgresql+asyncpg://papergraph:papergraph@postgres:5432/papergraph
+      POSTGRES_SYNC_DATABASE_URL: postgresql+psycopg://papergraph:papergraph@postgres:5432/papergraph
       OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: http://tempo:4318/v1/traces
     depends_on:
       - qdrant
       - neo4j
+      - postgres
       - tempo
 
   ui:
@@ -48,6 +51,18 @@ services:
     volumes:
       - neo4j_data:/data
       - neo4j_logs:/logs
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: papergraph-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: papergraph
+      POSTGRES_USER: papergraph
+      POSTGRES_PASSWORD: papergraph
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
 
   prometheus:
     image: prom/prometheus:latest
@@ -99,11 +114,13 @@ services:
     depends_on:
       - prometheus
       - tempo
+      - postgres
 
 volumes:
   qdrant_storage:
   neo4j_data:
   neo4j_logs:
+  postgres_data:
   prometheus_storage:
   tempo_storage:
   grafana_storage:
