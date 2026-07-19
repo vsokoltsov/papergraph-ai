@@ -87,7 +87,11 @@ def create_app(
         return StreamingResponse(
             stream_sse(runner(request.question)),
             media_type="text/event-stream",
-            headers={"Cache-Control": "no-cache"},
+            headers={
+                "Cache-Control": "no-cache, no-transform",
+                "Connection": "keep-alive",
+                "X-Accel-Buffering": "no",
+            },
         )
 
     @app.post("/feedback")
@@ -121,10 +125,12 @@ async def run_research_agent_stream(question: str) -> AsyncIterator[dict[str, An
     event_queue: asyncio.Queue[AgentEvent | None] = asyncio.Queue()
 
     yield {"type": "run_id", "run_id": run_id}
+    yield {"type": "status", "message": "Preparing research tools"}
 
     def emit_stream_event(event: AgentEvent) -> None:
         event_queue.put_nowait(event)
 
+    yield {"type": "status", "message": "Running agent"}
     task = asyncio.create_task(
         execute_research_agent(
             question=question,
@@ -135,8 +141,10 @@ async def run_research_agent_stream(question: str) -> AsyncIterator[dict[str, An
 
     while not task.done() or not event_queue.empty():
         try:
-            event = await asyncio.wait_for(event_queue.get(), timeout=0.1)
+            event = await asyncio.wait_for(event_queue.get(), timeout=0.5)
         except TimeoutError:
+            if not task.done():
+                yield {"type": "status", "message": "Still working"}
             continue
 
         if event is not None:
@@ -148,6 +156,7 @@ async def run_research_agent_stream(question: str) -> AsyncIterator[dict[str, An
         yield {"type": "error", "message": str(error)}
         return
 
+    yield {"type": "status", "message": "Streaming final answer"}
     for chunk in split_answer_chunks(str(result["answer"])):
         yield {"type": "answer_delta", "delta": chunk}
 
@@ -222,7 +231,7 @@ async def execute_research_agent(
 
 async def stream_sse(events: AsyncIterator[dict[str, Any]]) -> AsyncIterator[str]:
     async for event in events:
-        yield f"data: {json.dumps(event)}\n\n"
+        yield f"event: {event['type']}\ndata: {json.dumps(event)}\n\n"
 
 
 def split_answer_chunks(answer: str, chunk_size: int = 24) -> list[str]:

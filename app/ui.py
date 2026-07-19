@@ -1,6 +1,6 @@
 import json
 from collections.abc import Iterator
-from typing import Any
+from typing import Any, Literal
 
 import httpx
 import streamlit as st
@@ -28,9 +28,9 @@ def main() -> None:
 
     for message in st.session_state.messages:
         with st.chat_message(message["role"]):
-            st.markdown(message["content"])
             if message["role"] == "assistant" and message.get("events"):
                 render_events(message["events"])
+            st.markdown(message["content"])
             if message["role"] == "assistant" and message.get("run_id"):
                 render_feedback_form(settings.API_URL, message["run_id"])
 
@@ -62,44 +62,57 @@ def run_chat_turn(api_url: str, question: str) -> None:
         answer = ""
         events: list[dict[str, Any]] = []
         run_id = ""
+        research_placeholder = st.empty()
         answer_placeholder = st.empty()
-        events_placeholder = st.empty()
+        status_label = "Researching"
+        render_research_placeholder(research_placeholder, status_label, events)
 
-        with st.status("Researching", expanded=True) as status:
-            try:
-                for stream_event in stream_agent(api_url, question):
-                    match stream_event:
-                        case {"type": "run_id", "run_id": value}:
-                            run_id = value
-                        case {"type": "agent_event", "event": event}:
-                            events.append(event)
-                            render_events_placeholder(events_placeholder, events)
-                        case {"type": "answer_delta", "delta": delta}:
-                            answer = append_answer_delta(answer, delta)
-                            answer_placeholder.markdown(answer)
-                        case {"type": "done", "run_id": value, "answer": final_answer}:
-                            run_id = value
-                            answer = final_answer
-                            answer_placeholder.markdown(answer)
-                        case {"type": "error", "message": message}:
-                            raise httpx.HTTPError(message)
-            except httpx.HTTPError as error:
-                status.update(label="Request failed", state="error")
-                st.error(f"Backend request failed: {error}")
-                return
+        try:
+            for stream_event in stream_agent(api_url, question):
+                match stream_event:
+                    case {"type": "run_id", "run_id": value}:
+                        run_id = value
+                    case {"type": "status", "message": message}:
+                        status_label = message
+                        render_research_placeholder(research_placeholder, status_label, events)
+                    case {"type": "agent_event", "event": event}:
+                        append_visible_event(events, event)
+                        render_research_placeholder(research_placeholder, status_label, events)
+                    case {"type": "answer_delta", "delta": delta}:
+                        answer = append_answer_delta(answer, delta)
+                        answer_placeholder.markdown(answer)
+                    case {"type": "done", "run_id": value, "answer": final_answer}:
+                        run_id = value
+                        answer = final_answer
+                        answer_placeholder.markdown(answer)
+                    case {"type": "error", "message": message}:
+                        raise httpx.HTTPError(message)
+        except httpx.HTTPError as error:
+            render_research_placeholder(
+                research_placeholder,
+                "Request failed",
+                events,
+                state="error",
+            )
+            st.error(f"Backend request failed: {error}")
+            return
 
-            status.update(label="Research complete", state="complete")
+        render_research_placeholder(
+            research_placeholder,
+            "Research complete",
+            events,
+            state="complete",
+            expanded=True,
+        )
 
-        render_feedback_form(api_url, run_id)
-
-    st.session_state.messages.append(
-        {
+        assistant_message = {
             "role": "assistant",
             "content": answer,
             "events": events,
             "run_id": run_id,
         }
-    )
+        st.session_state.messages.append(assistant_message)
+        render_feedback_form(api_url, run_id)
 
 
 def run_agent(api_url: str, question: str) -> dict[str, Any]:
@@ -140,6 +153,13 @@ def append_answer_delta(answer: str, delta: str) -> str:
     return f"{answer} {delta}"
 
 
+def append_visible_event(events: list[dict[str, Any]], event: dict[str, Any]) -> None:
+    if events and format_event(events[-1]) == format_event(event):
+        return
+
+    events.append(event)
+
+
 def submit_feedback(
     api_url: str,
     run_id: str,
@@ -159,10 +179,14 @@ def submit_feedback(
 
 
 def render_feedback_form(api_url: str, run_id: str) -> None:
+    if not run_id:
+        return
+
     if run_id in st.session_state.submitted_feedback:
         st.caption("Feedback submitted")
         return
 
+    st.caption("Was this answer useful?")
     comment = st.text_input(
         "Optional feedback comment",
         key=f"feedback_comment_{run_id}",
@@ -171,11 +195,11 @@ def render_feedback_form(api_url: str, run_id: str) -> None:
     left, right = st.columns(2)
 
     with left:
-        if st.button("Thumbs up", key=f"feedback_up_{run_id}"):
+        if st.button("Useful", key=f"feedback_up_{run_id}", help="Mark answer as useful"):
             handle_feedback_submit(api_url, run_id, "thumbs_up", comment)
 
     with right:
-        if st.button("Thumbs down", key=f"feedback_down_{run_id}"):
+        if st.button("Not useful", key=f"feedback_down_{run_id}", help="Mark answer as not useful"):
             handle_feedback_submit(api_url, run_id, "thumbs_down", comment)
 
 
@@ -199,17 +223,58 @@ def render_events(events: list[dict[str, Any]]) -> None:
     if not events:
         return
 
-    st.caption("Agent steps")
-    for event in events:
-        st.markdown(f"- {format_event(event)}")
+    render_research_block("Research complete", events, state="complete", expanded=True)
 
 
 def render_events_placeholder(placeholder: Any, events: list[dict[str, Any]]) -> None:
     if not events:
         return
 
-    lines = ["Agent steps", *[f"- {format_event(event)}" for event in events]]
-    placeholder.markdown("\n".join(lines))
+    placeholder.markdown(render_event_lines_markdown(events))
+
+
+def render_research_placeholder(
+    placeholder: Any,
+    label: str,
+    events: list[dict[str, Any]],
+    state: Literal["running", "complete", "error"] = "running",
+    expanded: bool = True,
+) -> None:
+    with placeholder.container():
+        render_research_block(label, events, state=state, expanded=expanded)
+
+
+def render_research_block(
+    label: str,
+    events: list[dict[str, Any]],
+    state: Literal["running", "complete", "error"],
+    expanded: bool,
+) -> None:
+    with st.status(label, state=state, expanded=expanded):
+        if events:
+            render_event_lines(events)
+        else:
+            st.caption("Waiting for agent events...")
+
+
+def render_event_lines(events: list[dict[str, Any]]) -> None:
+    st.markdown(render_event_lines_markdown(events))
+
+
+def render_event_lines_markdown(events: list[dict[str, Any]]) -> str:
+    lines = [
+        "Agent steps",
+        *[f"- {format_event(event)}" for event in deduplicate_visible_events(events)],
+    ]
+    return "\n".join(lines)
+
+
+def deduplicate_visible_events(events: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    visible_events: list[dict[str, Any]] = []
+    for event in events:
+        append_visible_event(visible_events, event)
+
+    return visible_events
 
 
 def format_event(event: dict[str, Any]) -> str:
