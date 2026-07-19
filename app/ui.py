@@ -64,7 +64,7 @@ def run_chat_turn(api_url: str, question: str) -> None:
         run_id = ""
         research_placeholder = st.empty()
         answer_placeholder = st.empty()
-        status_label = "Researching"
+        status_label = "Still working"
         render_research_placeholder(research_placeholder, status_label, events)
 
         try:
@@ -72,9 +72,8 @@ def run_chat_turn(api_url: str, question: str) -> None:
                 match stream_event:
                     case {"type": "run_id", "run_id": value}:
                         run_id = value
-                    case {"type": "status", "message": message}:
-                        status_label = message
-                        render_research_placeholder(research_placeholder, status_label, events)
+                    case {"type": "status"}:
+                        continue
                     case {"type": "agent_event", "event": event}:
                         append_visible_event(events, event)
                         render_research_placeholder(research_placeholder, status_label, events)
