@@ -253,6 +253,8 @@ def test_run_chat_turn_streams_answer_and_saves_message(monkeypatch) -> None:
         lambda api_url, question: iter(
             [
                 {"type": "run_id", "run_id": "run-1"},
+                {"type": "status", "message": "Preparing research tools"},
+                {"type": "status", "message": "Running agent"},
                 {
                     "type": "agent_event",
                     "event": {"type": "run_start", "input": {"question": question}},
@@ -261,6 +263,7 @@ def test_run_chat_turn_streams_answer_and_saves_message(monkeypatch) -> None:
                     "type": "agent_event",
                     "event": {"type": "run_start", "input": {"question": question}},
                 },
+                {"type": "status", "message": "Streaming final answer"},
                 {"type": "answer_delta", "delta": "Graph"},
                 {"type": "answer_delta", "delta": "RAG"},
                 {"type": "done", "run_id": "run-1", "answer": "Graph RAG"},
@@ -289,6 +292,10 @@ def test_run_chat_turn_streams_answer_and_saves_message(monkeypatch) -> None:
         "state": "complete",
         "expanded": True,
     }
+    assert "Still working" in [status_call["label"] for status_call in fake_streamlit.status_calls]
+    assert "Streaming final answer" not in [
+        status_call["label"] for status_call in fake_streamlit.status_calls
+    ]
     assert feedback_calls == [("http://api", "run-1")]
 
 
