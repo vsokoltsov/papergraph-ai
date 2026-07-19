@@ -221,6 +221,8 @@ async def test_cli_redirects_runtime_logs_to_stderr(monkeypatch, capsys) -> None
         return [sample_result()]
 
     monkeypatch.setattr(evaluate, "run_evaluation_for_approaches", fake_run_evaluation)
+    monkeypatch.setattr(evaluate, "wait_for_llm_evaluation_services", fake_wait_for_services)
+    monkeypatch.setattr(evaluate, "push_metrics_to_gateway", fake_push_metrics_to_gateway)
     monkeypatch.setattr(
         "sys.argv",
         [
@@ -261,6 +263,8 @@ async def test_cli_writes_markdown_and_json_from_one_run(
         return [sample_result()]
 
     monkeypatch.setattr(evaluate, "run_evaluation_for_approaches", fake_run_evaluation)
+    monkeypatch.setattr(evaluate, "wait_for_llm_evaluation_services", fake_wait_for_services)
+    monkeypatch.setattr(evaluate, "push_metrics_to_gateway", fake_push_metrics_to_gateway)
     monkeypatch.setattr(
         "sys.argv",
         [
@@ -366,6 +370,14 @@ def sample_result(
         answer_reasoning="The answer matches the expected points.",
         trajectory_reasoning="The tool call was relevant.",
     )
+
+
+async def fake_wait_for_services(*args: Any, **kwargs: Any) -> None:
+    return None
+
+
+def fake_push_metrics_to_gateway(*args: Any, **kwargs: Any) -> None:
+    return None
 
 
 @dataclass
