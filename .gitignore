@@ -18,6 +18,7 @@ htmlcov/
 
 # Local migration state
 alembic_state.db
+.dlt/
 
 # Evaluation artifacts
 eval-results/
