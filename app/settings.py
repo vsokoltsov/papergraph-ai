@@ -14,6 +14,12 @@ class Settings(BaseSettings):
     NEO4J_URI: str = "bolt://localhost:7687"
     NEO4J_USER: str = "neo4j"
     NEO4J_PASSWORD: str = "password"
+    POSTGRES_DATABASE_URL: str = (
+        "postgresql+asyncpg://papergraph:papergraph@localhost:5432/papergraph"
+    )
+    POSTGRES_SYNC_DATABASE_URL: str = (
+        "postgresql+psycopg://papergraph:papergraph@localhost:5432/papergraph"
+    )
     API_URL: str = "http://localhost:8000"
     PROMETHEUS_PUSHGATEWAY_URL: str = "http://localhost:9091"
     OTEL_TRACING_ENABLED: bool = False
