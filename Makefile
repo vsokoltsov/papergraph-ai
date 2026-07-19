@@ -1,6 +1,6 @@
 PYTHON_TARGETS = app migrations tests
 
-.PHONY: check lint format-check typecheck test eval-retrieval eval-llm generate-llm-ground-truth backend ui fix format
+.PHONY: check lint format-check typecheck test dashboards eval-services eval-retrieval eval-llm generate-llm-ground-truth backend ui fix format
 
 check: lint format-check typecheck test
 
@@ -16,10 +16,16 @@ typecheck:
 test:
 	uv run pytest -q --cov=app --cov-report=term --cov-report=xml
 
+dashboards:
+	uv run python -m app.dashboards.generate
+
+eval-services:
+	docker compose up -d qdrant neo4j pushgateway prometheus grafana
+
 eval-retrieval:
 	uv run python -m app.eval.retrieval.evaluate
 
-eval-llm:
+eval-llm: eval-services
 	uv run python -m app.eval.llm.evaluate
 
 generate-llm-ground-truth:
