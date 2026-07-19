@@ -15,13 +15,13 @@
     ]
   },
   {
-    "question": "Find work about triaging urgent clinical messages with an LLM and graph retrieved medical protocols.",
+    "question": "Find work about triaging urgent clinical messages with an LLM and graph-retrieved medical protocols.",
     "expected_openalex_ids": [
       "https://openalex.org/W4409386825"
     ]
   },
   {
-    "question": "Which publication compares neighborhood-level retrieval with community-level retrieval over a medical knowledge graph?",
+    "question": "Which clinical publication compares neighborhood-level retrieval with community-level retrieval over a medical knowledge graph?",
     "expected_openalex_ids": [
       "https://openalex.org/W4409386825"
     ]
@@ -40,7 +40,7 @@
     ]
   },
   {
-    "question": "Which papers critique isolated chunk retrieval for domains where technical facts are linked across documents?",
+    "question": "Which papers critique isolated chunk retrieval for domains where important facts are linked across documents or entities?",
     "expected_openalex_ids": [
       "https://openalex.org/W4416402923",
       "https://openalex.org/W4416379250"
@@ -72,7 +72,7 @@
     ]
   },
   {
-    "question": "Find the survey paper that reviews graph retrieval augmented generation tasks evaluation methods and industrial use cases.",
+    "question": "Find the survey paper that reviews graph retrieval augmented generation tasks, evaluation methods, and industrial use cases.",
     "expected_openalex_ids": [
       "https://openalex.org/W4416379250"
     ]
@@ -91,6 +91,32 @@
       "https://openalex.org/W4409386825",
       "https://openalex.org/W4416402923",
       "https://openalex.org/W4394619840"
+    ]
+  },
+  {
+    "question": "Which retrieved papers share graph-related topics but come from different application domains?",
+    "expected_openalex_ids": [
+      "https://openalex.org/W4409386825",
+      "https://openalex.org/W4416402923",
+      "https://openalex.org/W4394619840",
+      "https://openalex.org/W4402567773"
+    ]
+  },
+  {
+    "question": "Which papers should I compare if I want both semantic evidence from abstracts and graph context from topics or sources?",
+    "expected_openalex_ids": [
+      "https://openalex.org/W4416379250",
+      "https://openalex.org/W4416402923",
+      "https://openalex.org/W4402567773"
+    ]
+  },
+  {
+    "question": "Which GraphRAG papers are useful for comparing survey-level methodology with concrete biomedical and engineering systems?",
+    "expected_openalex_ids": [
+      "https://openalex.org/W4416379250",
+      "https://openalex.org/W4402567773",
+      "https://openalex.org/W4409386825",
+      "https://openalex.org/W4416402923"
     ]
   }
 ]
