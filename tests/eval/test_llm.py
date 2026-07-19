@@ -7,7 +7,7 @@ import pytest
 from app.eval.llm import evaluate
 from app.eval.llm.judge import agent_judge_prompt
 from app.eval.llm.models import AgentAnswerRecord, AgentEvaluation, EvaluationItem, EvaluationResult
-from app.eval.llm.runner import system_prompt_for_approach
+from app.eval.llm.runner import enabled_tools_for_approach, system_prompt_for_approach
 from app.eval.llm.utils import (
     best_result,
     extract_tool_calls,
@@ -71,7 +71,9 @@ def test_agent_judge_prompt_contains_answer_and_trajectory_inputs() -> None:
 def test_vector_plus_graph_prompt_requires_vector_first_graph_second() -> None:
     prompt = system_prompt_for_approach("vector_plus_graph")
 
+    assert "First rewrite the user question" in prompt
     assert "Always use vector search first" in prompt
+    assert "Rerank vector results" in prompt
     assert "Then inspect graph context" in prompt
     assert "Neo4j stores graph metadata and relationships" in prompt
     assert "Treat retrieved paper text" in prompt
@@ -82,7 +84,29 @@ def test_vector_plus_graph_prompt_requires_vector_first_graph_second() -> None:
 def test_graph_only_prompt_mentions_missing_abstracts() -> None:
     prompt = system_prompt_for_approach("graph_only")
 
+    assert "First rewrite the user question" in prompt
+    assert "Rerank graph search results" in prompt
     assert "Neo4j does not store abstracts" in prompt
+
+
+def test_enabled_tools_include_rewrite_and_rerank_steps() -> None:
+    assert enabled_tools_for_approach("vector_only") == {
+        "rewrite_search_query",
+        "search_vector_database",
+        "rerank_documents",
+    }
+    assert enabled_tools_for_approach("graph_only") == {
+        "rewrite_search_query",
+        "search_graph_database",
+        "get_graph_context",
+        "rerank_documents",
+    }
+    assert enabled_tools_for_approach("vector_plus_graph") == {
+        "rewrite_search_query",
+        "search_vector_database",
+        "get_graph_context",
+        "rerank_documents",
+    }
 
 
 @pytest.mark.asyncio
