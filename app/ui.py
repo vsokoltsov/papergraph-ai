@@ -18,6 +18,8 @@ def main() -> None:
 
     if "messages" not in st.session_state:
         st.session_state.messages = []
+    if "submitted_feedback" not in st.session_state:
+        st.session_state.submitted_feedback = set()
 
     if not st.session_state.messages and handle_question_form(settings.API_URL):
         return
@@ -27,6 +29,8 @@ def main() -> None:
             st.markdown(message["content"])
             if message["role"] == "assistant" and message.get("events"):
                 render_events(message["events"])
+            if message["role"] == "assistant" and message.get("run_id"):
+                render_feedback_form(settings.API_URL, message["run_id"])
 
     if st.session_state.messages:
         handle_question_form(settings.API_URL)
@@ -65,12 +69,14 @@ def run_chat_turn(api_url: str, question: str) -> None:
             status.update(label="Research complete", state="complete")
 
         st.markdown(result["answer"])
+        render_feedback_form(api_url, result["run_id"])
 
     st.session_state.messages.append(
         {
             "role": "assistant",
             "content": result["answer"],
             "events": result["events"],
+            "run_id": result["run_id"],
         }
     )
 
@@ -83,6 +89,61 @@ def run_agent(api_url: str, question: str) -> dict[str, Any]:
         )
         response.raise_for_status()
         return response.json()
+
+
+def submit_feedback(
+    api_url: str,
+    run_id: str,
+    rating: str,
+    comment: str | None = None,
+) -> None:
+    with httpx.Client(timeout=30) as client:
+        response = client.post(
+            f"{api_url.rstrip('/')}/feedback",
+            json={
+                "run_id": run_id,
+                "rating": rating,
+                "comment": comment,
+            },
+        )
+        response.raise_for_status()
+
+
+def render_feedback_form(api_url: str, run_id: str) -> None:
+    if run_id in st.session_state.submitted_feedback:
+        st.caption("Feedback submitted")
+        return
+
+    comment = st.text_input(
+        "Optional feedback comment",
+        key=f"feedback_comment_{run_id}",
+        placeholder="What was useful or missing?",
+    )
+    left, right = st.columns(2)
+
+    with left:
+        if st.button("Thumbs up", key=f"feedback_up_{run_id}"):
+            handle_feedback_submit(api_url, run_id, "thumbs_up", comment)
+
+    with right:
+        if st.button("Thumbs down", key=f"feedback_down_{run_id}"):
+            handle_feedback_submit(api_url, run_id, "thumbs_down", comment)
+
+
+def handle_feedback_submit(
+    api_url: str,
+    run_id: str,
+    rating: str,
+    comment: str | None,
+) -> None:
+    try:
+        submit_feedback(api_url, run_id, rating, comment or None)
+    except httpx.HTTPError as error:
+        st.error(f"Feedback request failed: {error}")
+        return
+
+    st.session_state.submitted_feedback.add(run_id)
+    st.toast("Feedback submitted")
 
 
 def render_events(events: list[dict[str, Any]]) -> None:
