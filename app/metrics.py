@@ -107,6 +107,11 @@ LLM_EVAL_EXAMPLES_TOTAL = Gauge(
     "Total LLM evaluation examples judged.",
     ["approach"],
 )
+FEEDBACK_TOTAL = Counter(
+    "papergraph_feedback_total",
+    "Total user feedback records submitted.",
+    ["rating"],
+)
 
 
 class PrometheusMiddleware(BaseHTTPMiddleware):
