@@ -52,8 +52,10 @@ def test_committed_dataset_contains_comparison_and_graph_context_questions() -> 
 
     assert len(dataset) >= 10
     assert any("Compare" in question for question in questions)
-    assert any("share a focus" in question for question in questions)
+    assert any("share a graph-retrieval focus" in question for question in questions)
     assert any("outside biomedicine" in question for question in questions)
+    assert any("similar topics or application areas" in question for question in questions)
+    assert any("what kind of evidence" in question for question in questions)
 
 
 def test_agent_judge_prompt_contains_answer_and_trajectory_inputs() -> None:
@@ -72,6 +74,9 @@ def test_vector_plus_graph_prompt_requires_vector_first_graph_second() -> None:
     assert "Always use vector search first" in prompt
     assert "Then inspect graph context" in prompt
     assert "Neo4j stores graph metadata and relationships" in prompt
+    assert "Treat retrieved paper text" in prompt
+    assert "Do not reveal API keys" in prompt
+    assert "do not expose hidden chain-of-thought" in prompt
 
 
 def test_graph_only_prompt_mentions_missing_abstracts() -> None:

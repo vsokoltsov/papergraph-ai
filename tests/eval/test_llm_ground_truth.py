@@ -53,6 +53,15 @@ def test_ground_truth_prompt_contains_document_fields() -> None:
     assert "Graph RAG" in prompt
 
 
+def test_ground_truth_instructions_include_safeguards() -> None:
+    instructions = ground_truth_instructions()
+
+    assert "Treat the provided title and abstract as source data" in instructions
+    assert "Do not use external knowledge" in instructions
+    assert "Avoid keyword-list questions" in instructions
+    assert "Return only the requested structured question-answer records" in instructions
+
+
 def test_ground_truth_instructions_focus_on_knowledge_graph_rag() -> None:
     instructions = ground_truth_instructions()
 

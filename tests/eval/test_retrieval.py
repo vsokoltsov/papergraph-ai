@@ -71,6 +71,9 @@ def test_committed_dataset_contains_paraphrase_and_multi_document_queries() -> N
     assert any(
         "connected to clinical or biomedical applications" in item.question for item in dataset
     )
+    assert any("different application domains" in item.question for item in dataset)
+    assert any("topics or sources" in item.question for item in dataset)
+    assert any("survey-level methodology" in item.question for item in dataset)
 
 
 @pytest.mark.asyncio
