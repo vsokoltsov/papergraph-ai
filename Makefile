@@ -1,6 +1,6 @@
 PYTHON_TARGETS = app migrations tests
 
-.PHONY: check lint format-check typecheck test dashboards eval-services eval-retrieval eval-llm generate-llm-ground-truth backend ui fix format
+.PHONY: check lint format-check typecheck test dashboards ingest-openalex eval-services eval-retrieval eval-llm generate-llm-ground-truth backend ui fix format
 
 check: lint format-check typecheck test
 
@@ -18,6 +18,9 @@ test:
 
 dashboards:
 	uv run python -m app.dashboards.generate
+
+ingest-openalex:
+	uv run python -m app.ingestion.run "$(query)"
 
 eval-services:
 	docker compose up -d qdrant neo4j pushgateway prometheus grafana
