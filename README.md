@@ -42,8 +42,8 @@ The frozen dataset intentionally mixes direct paper questions, semantic paraphra
 Start databases and run migrations:
 
 ```bash
-docker compose up -d qdrant neo4j
-uv run alembic upgrade head
+docker compose up -d qdrant neo4j postgres
+uv run alembic upgrade heads
 ```
 
 Ingest papers:
