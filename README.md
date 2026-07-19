@@ -3,7 +3,25 @@
 [![CI](https://github.com/vsokoltsov/papergraph-ai/actions/workflows/ci.yml/badge.svg)](https://github.com/vsokoltsov/papergraph-ai/actions/workflows/ci.yml)
 [![codecov](https://codecov.io/gh/vsokoltsov/papergraph-ai/branch/main/graph/badge.svg)](https://codecov.io/gh/vsokoltsov/papergraph-ai)
 
+![](./docs/papergraph_cover.png)
+
+![Python](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)
+![FastAPI](https://img.shields.io/badge/FastAPI-API-009688?logo=fastapi&logoColor=white)
+![Streamlit](https://img.shields.io/badge/Streamlit-UI-FF4B4B?logo=streamlit&logoColor=white)
+![LangChain](https://img.shields.io/badge/LangChain-Agent-1C3C3C)
+![OpenAI](https://img.shields.io/badge/OpenAI-LLM-412991?logo=openai&logoColor=white)
+![OpenAlex](https://img.shields.io/badge/OpenAlex-Papers-2B6CB0)
+![Qdrant](https://img.shields.io/badge/Qdrant-Vector_DB-DC244C)
+![Neo4j](https://img.shields.io/badge/Neo4j-Graph_DB-4581C3?logo=neo4j&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Feedback-4169E1?logo=postgresql&logoColor=white)
+![dlt](https://img.shields.io/badge/dlt-Ingestion-F5CD21)
+![Grafana](https://img.shields.io/badge/Grafana-Monitoring-F46800?logo=grafana&logoColor=white)
+![Prometheus](https://img.shields.io/badge/Prometheus-Metrics-E6522C?logo=prometheus&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)
+
 ## 🧩 Problem Description
+
+![](./docs/infographic.png)
 
 PaperGraph AI helps researchers explore scientific papers from OpenAlex with an agentic AI
 workflow. The app ingests paper metadata and abstracts, stores semantic content in Qdrant, stores
