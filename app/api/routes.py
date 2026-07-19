@@ -1,0 +1,65 @@
+from collections.abc import AsyncIterator
+
+from fastapi import APIRouter, Request
+from fastapi.responses import StreamingResponse
+
+from app.api.lifespan import get_feedback_repository, run_research_agent, run_research_agent_stream
+from app.api.models import (
+    AgentRunRequest,
+    AgentRunResponse,
+    AgentStreamRunner,
+    FeedbackRequest,
+    FeedbackResponse,
+)
+from app.repositories.feedback import FeedbackRecord
+
+router = APIRouter()
+
+
+@router.get("/health")
+async def health() -> dict[str, str]:
+    return {"status": "ok"}
+
+
+@router.post("/agent/runs")
+async def run_agent(request: AgentRunRequest, app_request: Request) -> AgentRunResponse:
+    runner = app_request.app.state.agent_runner or run_research_agent
+    result = await runner(request.question)
+    return AgentRunResponse.model_validate(result)
+
+
+@router.post("/agent/runs/stream")
+async def stream_agent(request: AgentRunRequest, app_request: Request) -> StreamingResponse:
+    runner = app_request.app.state.agent_stream_runner or run_research_agent_stream
+    return StreamingResponse(
+        run_research_agent_sse(runner, request.question),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache, no-transform",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
+
+
+@router.post("/feedback")
+async def create_feedback(request: FeedbackRequest, app_request: Request) -> FeedbackResponse:
+    repository = app_request.app.state.feedback_repository or get_feedback_repository()
+    await repository.save_feedback(
+        FeedbackRecord(
+            run_id=request.run_id,
+            rating=request.rating,
+            comment=request.comment,
+        )
+    )
+    return FeedbackResponse(status="ok")
+
+
+async def run_research_agent_sse(
+    runner: AgentStreamRunner,
+    question: str,
+) -> AsyncIterator[str]:
+    from app.api.lifespan import stream_sse
+
+    async for event in stream_sse(runner(question)):
+        yield event

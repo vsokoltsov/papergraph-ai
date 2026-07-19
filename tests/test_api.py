@@ -4,6 +4,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 import app.api as api
+import app.api.lifespan as api_lifespan
 from app.api import create_app
 from app.repositories.feedback import AgentRunRecord, FeedbackRecord
 from app.settings import Settings
@@ -126,11 +127,11 @@ def test_feedback_endpoint_rejects_unknown_rating() -> None:
 
 
 def test_get_feedback_repository_uses_postgres_settings(monkeypatch) -> None:
-    api.get_feedback_repository.cache_clear()
+    api_lifespan.get_feedback_repository.cache_clear()
     created_urls: list[str] = []
 
     monkeypatch.setattr(
-        api,
+        api_lifespan,
         "get_settings",
         lambda: Settings(POSTGRES_DATABASE_URL="postgresql+asyncpg://example"),
     )
@@ -139,13 +140,13 @@ def test_get_feedback_repository_uses_postgres_settings(monkeypatch) -> None:
         created_urls.append(url)
         return "engine"
 
-    monkeypatch.setattr(api, "get_postgres_engine", fake_get_postgres_engine)
+    monkeypatch.setattr(api_lifespan, "get_postgres_engine", fake_get_postgres_engine)
 
-    repository = api.get_feedback_repository()
+    repository = api_lifespan.get_feedback_repository()
 
     assert repository.db == "engine"
     assert created_urls == ["postgresql+asyncpg://example"]
-    api.get_feedback_repository.cache_clear()
+    api_lifespan.get_feedback_repository.cache_clear()
 
 
 @pytest.mark.asyncio
@@ -154,7 +155,7 @@ async def test_run_research_agent_saves_run(monkeypatch) -> None:
     captured_tools: dict[str, Any] = {}
 
     monkeypatch.setattr(
-        api,
+        api_lifespan,
         "get_settings",
         lambda: Settings(
             OPENALEX_API_KEY="openalex-key",
@@ -167,22 +168,30 @@ async def test_run_research_agent_saves_run(monkeypatch) -> None:
             NEO4J_PASSWORD="password",
         ),
     )
-    monkeypatch.setattr(api, "uuid4", lambda: "run-1")
-    monkeypatch.setattr(api, "monotonic", FakeClock([10.0, 11.5]))
-    monkeypatch.setattr(api, "OpenAlexClient", lambda api_key: FakeOpenAlexClient(api_key))
-    monkeypatch.setattr(api, "get_qdrant_client", lambda url: f"qdrant:{url}")
-    monkeypatch.setattr(api, "get_neo4j_driver", lambda uri, user, password: f"neo4j:{uri}")
-    monkeypatch.setattr(api, "get_feedback_repository", lambda: feedback_repository)
-    monkeypatch.setattr(api, "ResearchAgent", FakeResearchAgent)
-    monkeypatch.setattr(api, "estimate_tokens", lambda value, model_name: len(str(value)))
+    monkeypatch.setattr(api_lifespan, "uuid4", lambda: "run-1")
+    monkeypatch.setattr(api_lifespan, "monotonic", FakeClock([10.0, 11.5]))
+    monkeypatch.setattr(
+        api_lifespan,
+        "OpenAlexClient",
+        lambda api_key: FakeOpenAlexClient(api_key),
+    )
+    monkeypatch.setattr(api_lifespan, "get_qdrant_client", lambda url: f"qdrant:{url}")
+    monkeypatch.setattr(
+        api_lifespan,
+        "get_neo4j_driver",
+        lambda uri, user, password: f"neo4j:{uri}",
+    )
+    monkeypatch.setattr(api_lifespan, "get_feedback_repository", lambda: feedback_repository)
+    monkeypatch.setattr(api_lifespan, "ResearchAgent", FakeResearchAgent)
+    monkeypatch.setattr(api_lifespan, "estimate_tokens", lambda value, model_name: len(str(value)))
 
     def fake_create_research_tools(**kwargs: Any) -> list[str]:
         captured_tools.update(kwargs)
         return ["tool"]
 
-    monkeypatch.setattr(api, "create_research_tools", fake_create_research_tools)
+    monkeypatch.setattr(api_lifespan, "create_research_tools", fake_create_research_tools)
 
-    result = await api.run_research_agent("What is GraphRAG?")
+    result = await api_lifespan.run_research_agent("What is GraphRAG?")
 
     assert result == {
         "run_id": "run-1",
@@ -219,11 +228,15 @@ async def test_run_research_agent_stream_yields_progress_and_answer(monkeypatch)
             "events": [{"type": "run_start", "input": {"question": question}}],
         }
 
-    monkeypatch.setattr(api, "uuid4", lambda: "run-1")
-    monkeypatch.setattr(api, "execute_research_agent", fake_execute_research_agent)
-    monkeypatch.setattr(api, "split_answer_chunks", lambda answer: ["Graph RAG", "answer"])
+    monkeypatch.setattr(api_lifespan, "uuid4", lambda: "run-1")
+    monkeypatch.setattr(api_lifespan, "execute_research_agent", fake_execute_research_agent)
+    monkeypatch.setattr(
+        api_lifespan,
+        "split_answer_chunks",
+        lambda answer: ["Graph RAG", "answer"],
+    )
 
-    events = [event async for event in api.run_research_agent_stream("What is GraphRAG?")]
+    events = [event async for event in api_lifespan.run_research_agent_stream("What is GraphRAG?")]
 
     assert events == [
         {"type": "run_id", "run_id": "run-1"},
@@ -254,10 +267,10 @@ async def test_run_research_agent_stream_yields_error(monkeypatch) -> None:
     ) -> dict[str, Any]:
         raise RuntimeError("backend failed")
 
-    monkeypatch.setattr(api, "uuid4", lambda: "run-1")
-    monkeypatch.setattr(api, "execute_research_agent", fake_execute_research_agent)
+    monkeypatch.setattr(api_lifespan, "uuid4", lambda: "run-1")
+    monkeypatch.setattr(api_lifespan, "execute_research_agent", fake_execute_research_agent)
 
-    events = [event async for event in api.run_research_agent_stream("What is GraphRAG?")]
+    events = [event async for event in api_lifespan.run_research_agent_stream("What is GraphRAG?")]
 
     assert events == [
         {"type": "run_id", "run_id": "run-1"},

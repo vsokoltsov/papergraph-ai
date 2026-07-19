@@ -1,112 +1,26 @@
 import asyncio
 import json
-from collections.abc import AsyncIterator, Awaitable, Callable
+from collections.abc import AsyncIterator, Callable
 from functools import lru_cache
 from time import monotonic
-from typing import Any, Protocol
+from typing import Any
 from uuid import uuid4
 
-from fastapi import FastAPI
-from fastapi.responses import StreamingResponse
 from opentelemetry import trace
-from pydantic import BaseModel, Field
 
 from app.agents.research import AgentEvent, ResearchAgent, create_research_tools
 from app.clients.openalex import OpenAlexClient
 from app.db.neo4j import get_neo4j_driver
 from app.db.postgres import get_postgres_engine
 from app.db.qdrant import get_qdrant_client
-from app.logging import configure_logging
-from app.metrics import estimate_tokens, instrument_prometheus
-from app.repositories.feedback import AgentRunRecord, FeedbackRecord, FeedbackRepository
+from app.metrics import estimate_tokens
+from app.repositories.feedback import AgentRunRecord, FeedbackRepository
 from app.repositories.graph import GraphRepository
 from app.repositories.vector import VectorRepository
 from app.services.papers import PapersService
-from app.settings import Settings, get_settings
-from app.tracing import configure_tracing, instrument_fastapi_app
+from app.settings import get_settings
 
 tracer = trace.get_tracer(__name__)
-AgentRunner = Callable[[str], Awaitable[dict[str, Any]]]
-AgentStreamRunner = Callable[[str], AsyncIterator[dict[str, Any]]]
-
-
-class FeedbackWriter(Protocol):
-    async def save_feedback(self, record: FeedbackRecord) -> None: ...
-
-
-class AgentRunRequest(BaseModel):
-    question: str
-
-
-class AgentRunResponse(BaseModel):
-    run_id: str
-    answer: str
-    events: list[AgentEvent]
-
-
-class FeedbackRequest(BaseModel):
-    run_id: str
-    rating: str = Field(pattern="^(thumbs_up|thumbs_down)$")
-    comment: str | None = None
-
-
-class FeedbackResponse(BaseModel):
-    status: str
-
-
-def create_app(
-    agent_runner: AgentRunner | None = None,
-    agent_stream_runner: AgentStreamRunner | None = None,
-    feedback_repository: FeedbackWriter | None = None,
-    settings: Settings | None = None,
-) -> FastAPI:
-    if agent_runner is None:
-        settings = settings or get_settings()
-        configure_logging(settings.LOG_LEVEL)
-        configure_tracing(settings)
-
-    app = FastAPI(title="PaperGraph AI")
-    instrument_prometheus(app)
-
-    if settings:
-        instrument_fastapi_app(app, settings)
-
-    @app.get("/health")
-    async def health() -> dict[str, str]:
-        return {"status": "ok"}
-
-    @app.post("/agent/runs")
-    async def run_agent(request: AgentRunRequest) -> AgentRunResponse:
-        runner = agent_runner or run_research_agent
-        result = await runner(request.question)
-        return AgentRunResponse.model_validate(result)
-
-    @app.post("/agent/runs/stream")
-    async def stream_agent(request: AgentRunRequest) -> StreamingResponse:
-        runner = agent_stream_runner or run_research_agent_stream
-        return StreamingResponse(
-            stream_sse(runner(request.question)),
-            media_type="text/event-stream",
-            headers={
-                "Cache-Control": "no-cache, no-transform",
-                "Connection": "keep-alive",
-                "X-Accel-Buffering": "no",
-            },
-        )
-
-    @app.post("/feedback")
-    async def create_feedback(request: FeedbackRequest) -> FeedbackResponse:
-        repository = feedback_repository or get_feedback_repository()
-        await repository.save_feedback(
-            FeedbackRecord(
-                run_id=request.run_id,
-                rating=request.rating,
-                comment=request.comment,
-            )
-        )
-        return FeedbackResponse(status="ok")
-
-    return app
 
 
 @tracer.start_as_current_span("backend.run_research_agent")
@@ -249,6 +163,3 @@ def split_answer_chunks(answer: str, chunk_size: int = 24) -> list[str]:
 def get_feedback_repository() -> FeedbackRepository:
     settings = get_settings()
     return FeedbackRepository(db=get_postgres_engine(settings.POSTGRES_DATABASE_URL))
-
-
-app = create_app()
