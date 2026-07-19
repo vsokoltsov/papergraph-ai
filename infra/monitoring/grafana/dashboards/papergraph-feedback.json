@@ -1,0 +1,217 @@
+{
+  "panels": [
+    {
+      "datasource": {
+        "type": "postgres",
+        "uid": "PostgreSQL"
+      },
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 0
+      },
+      "id": 1,
+      "options": {},
+      "targets": [
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "PostgreSQL"
+          },
+          "format": "time_series",
+          "rawSql": "\n                    SELECT\n                        $__timeGroupAlias(f.created_at, '1m'),\n                        f.rating AS metric,\n                        count(*) AS value\n                    FROM feedback f\n                    WHERE $__timeFilter(f.created_at)\n                    GROUP BY 1, 2\n                    ORDER BY 1\n                    ",
+          "refId": "A"
+        }
+      ],
+      "title": "Feedback / min",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "postgres",
+        "uid": "PostgreSQL"
+      },
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 0
+      },
+      "id": 2,
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "right"
+        },
+        "pieType": "donut"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "PostgreSQL"
+          },
+          "format": "table",
+          "rawSql": "\n                    SELECT\n                        rating AS metric,\n                        count(*) AS value\n                    FROM feedback\n                    WHERE $__timeFilter(created_at)\n                    GROUP BY rating\n                    ORDER BY value DESC\n                    ",
+          "refId": "A"
+        }
+      ],
+      "title": "Rating Split",
+      "type": "piechart"
+    },
+    {
+      "datasource": {
+        "type": "postgres",
+        "uid": "PostgreSQL"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "max": 1,
+          "min": 0,
+          "unit": "percentunit"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 8
+      },
+      "id": 3,
+      "options": {},
+      "targets": [
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "PostgreSQL"
+          },
+          "format": "table",
+          "rawSql": "\n                    SELECT\n                        COALESCE(\n                            count(*) FILTER (WHERE rating = 'thumbs_down')::double precision\n                            / NULLIF(count(*), 0),\n                            0\n                        ) AS value\n                    FROM feedback\n                    WHERE $__timeFilter(created_at)\n                    ",
+          "refId": "A"
+        }
+      ],
+      "title": "Negative Feedback Rate",
+      "type": "gauge"
+    },
+    {
+      "datasource": {
+        "type": "postgres",
+        "uid": "PostgreSQL"
+      },
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 8
+      },
+      "id": 4,
+      "options": {},
+      "targets": [
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "PostgreSQL"
+          },
+          "format": "table",
+          "rawSql": "\n                    SELECT\n                        f.rating AS metric,\n                        avg(a.total_tokens) AS value\n                    FROM feedback f\n                    JOIN agent_runs a ON a.run_id = f.run_id\n                    WHERE $__timeFilter(f.created_at)\n                    GROUP BY f.rating\n                    ORDER BY value DESC\n                    ",
+          "refId": "A"
+        }
+      ],
+      "title": "Average Tokens by Rating",
+      "type": "barchart"
+    },
+    {
+      "datasource": {
+        "type": "postgres",
+        "uid": "PostgreSQL"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 8
+      },
+      "id": 5,
+      "options": {},
+      "targets": [
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "PostgreSQL"
+          },
+          "format": "table",
+          "rawSql": "\n                    SELECT\n                        f.rating AS metric,\n                        avg(a.duration_seconds) AS value\n                    FROM feedback f\n                    JOIN agent_runs a ON a.run_id = f.run_id\n                    WHERE $__timeFilter(f.created_at)\n                    GROUP BY f.rating\n                    ORDER BY value DESC\n                    ",
+          "refId": "A"
+        }
+      ],
+      "title": "Average Latency by Rating",
+      "type": "bargauge"
+    },
+    {
+      "datasource": {
+        "type": "postgres",
+        "uid": "PostgreSQL"
+      },
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 16
+      },
+      "id": 6,
+      "options": {},
+      "targets": [
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "PostgreSQL"
+          },
+          "format": "table",
+          "rawSql": "\n                    SELECT\n                        f.created_at,\n                        f.rating,\n                        a.question,\n                        f.comment\n                    FROM feedback f\n                    JOIN agent_runs a ON a.run_id = f.run_id\n                    WHERE $__timeFilter(f.created_at)\n                    ORDER BY f.created_at DESC\n                    LIMIT 25\n                    ",
+          "refId": "A"
+        }
+      ],
+      "title": "Recent Feedback Comments",
+      "type": "table"
+    }
+  ],
+  "refresh": "10s",
+  "schemaVersion": 39,
+  "tags": [
+    "papergraph",
+    "feedback",
+    "monitoring"
+  ],
+  "time": {
+    "from": "now-5m",
+    "to": "now"
+  },
+  "timezone": "browser",
+  "title": "PaperGraph User Feedback",
+  "uid": "papergraph-feedback",
+  "version": 1
+}
