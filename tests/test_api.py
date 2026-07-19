@@ -1,9 +1,12 @@
 from typing import Any
 
+import pytest
 from fastapi.testclient import TestClient
 
+import app.api as api
 from app.api import create_app
-from app.repositories.feedback import FeedbackRecord
+from app.repositories.feedback import AgentRunRecord, FeedbackRecord
+from app.settings import Settings
 
 
 def test_health_returns_ok() -> None:
@@ -99,6 +102,87 @@ def test_feedback_endpoint_rejects_unknown_rating() -> None:
     assert response.status_code == 422
 
 
+def test_get_feedback_repository_uses_postgres_settings(monkeypatch) -> None:
+    api.get_feedback_repository.cache_clear()
+    created_urls: list[str] = []
+
+    monkeypatch.setattr(
+        api,
+        "get_settings",
+        lambda: Settings(POSTGRES_DATABASE_URL="postgresql+asyncpg://example"),
+    )
+
+    def fake_get_postgres_engine(url: str) -> str:
+        created_urls.append(url)
+        return "engine"
+
+    monkeypatch.setattr(api, "get_postgres_engine", fake_get_postgres_engine)
+
+    repository = api.get_feedback_repository()
+
+    assert repository.db == "engine"
+    assert created_urls == ["postgresql+asyncpg://example"]
+    api.get_feedback_repository.cache_clear()
+
+
+@pytest.mark.asyncio
+async def test_run_research_agent_saves_run(monkeypatch) -> None:
+    feedback_repository = FakeFeedbackRepository()
+    captured_tools: dict[str, Any] = {}
+
+    monkeypatch.setattr(
+        api,
+        "get_settings",
+        lambda: Settings(
+            OPENALEX_API_KEY="openalex-key",
+            OPENAI_API_KEY="openai-key",
+            LLM_MODEL="test-model",
+            QDRANT_URL="http://qdrant",
+            QDRANT_COLLECTION_NAME="papers",
+            NEO4J_URI="bolt://neo4j:7687",
+            NEO4J_USER="neo4j",
+            NEO4J_PASSWORD="password",
+        ),
+    )
+    monkeypatch.setattr(api, "uuid4", lambda: "run-1")
+    monkeypatch.setattr(api, "monotonic", FakeClock([10.0, 11.5]))
+    monkeypatch.setattr(api, "OpenAlexClient", lambda api_key: FakeOpenAlexClient(api_key))
+    monkeypatch.setattr(api, "get_qdrant_client", lambda url: f"qdrant:{url}")
+    monkeypatch.setattr(api, "get_neo4j_driver", lambda uri, user, password: f"neo4j:{uri}")
+    monkeypatch.setattr(api, "get_feedback_repository", lambda: feedback_repository)
+    monkeypatch.setattr(api, "ResearchAgent", FakeResearchAgent)
+    monkeypatch.setattr(api, "estimate_tokens", lambda value, model_name: len(str(value)))
+
+    def fake_create_research_tools(**kwargs: Any) -> list[str]:
+        captured_tools.update(kwargs)
+        return ["tool"]
+
+    monkeypatch.setattr(api, "create_research_tools", fake_create_research_tools)
+
+    result = await api.run_research_agent("What is GraphRAG?")
+
+    assert result == {
+        "run_id": "run-1",
+        "answer": "Agent answer.",
+        "events": [
+            {"type": "run_start", "input": {"question": "What is GraphRAG?"}},
+            {"type": "run_end", "output": {"answer": "Agent answer."}},
+        ],
+    }
+    assert captured_tools["emit_event"] is not None
+    assert feedback_repository.agent_runs == [
+        AgentRunRecord(
+            run_id="run-1",
+            question="What is GraphRAG?",
+            answer="Agent answer.",
+            prompt_tokens=len("What is GraphRAG?"),
+            completion_tokens=len("Agent answer."),
+            total_tokens=len("What is GraphRAG?") + len("Agent answer."),
+            duration_seconds=1.5,
+        )
+    ]
+
+
 async def _fake_agent_runner(question: str) -> dict[str, Any]:
     return {
         "run_id": "run-1",
@@ -113,6 +197,39 @@ async def _fake_agent_runner(question: str) -> dict[str, Any]:
 class FakeFeedbackRepository:
     def __init__(self) -> None:
         self.records: list[FeedbackRecord] = []
+        self.agent_runs: list[AgentRunRecord] = []
 
     async def save_feedback(self, record: FeedbackRecord) -> None:
         self.records.append(record)
+
+    async def save_agent_run(self, record: AgentRunRecord) -> None:
+        self.agent_runs.append(record)
+
+
+class FakeClock:
+    def __init__(self, values: list[float]) -> None:
+        self.values = values
+
+    def __call__(self) -> float:
+        return self.values.pop(0)
+
+
+class FakeOpenAlexClient:
+    def __init__(self, api_key: str) -> None:
+        self.api_key = api_key
+
+
+class FakeResearchAgent:
+    def __init__(
+        self,
+        tools: list[str],
+        model_name: str,
+        api_key: str,
+        emit_event: Any,
+    ) -> None:
+        self.emit_event = emit_event
+
+    async def run(self, question: str) -> str:
+        self.emit_event({"type": "run_start", "input": {"question": question}})
+        self.emit_event({"type": "run_end", "output": {"answer": "Agent answer."}})
+        return "Agent answer."
