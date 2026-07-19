@@ -8,7 +8,15 @@ from pathlib import Path
 from typing import cast
 
 from app.eval.llm.models import AgentApproach
-from app.eval.llm.utils import EVALUATION_APPROACHES, render_results, run_evaluation_for_approaches
+from app.eval.llm.utils import (
+    EVALUATION_APPROACHES,
+    render_results,
+    run_evaluation_for_approaches,
+    summary_to_dataframe,
+)
+from app.eval.services import EvaluationServiceError, wait_for_llm_evaluation_services
+from app.metrics import push_metrics_to_gateway, record_llm_evaluation_summary
+from app.settings import get_settings
 
 
 async def main() -> None:
@@ -44,13 +52,31 @@ async def main() -> None:
         help="Agent approaches to evaluate.",
     )
     args = parser.parse_args()
+    settings = get_settings()
+    approaches = [cast(AgentApproach, approach) for approach in args.approaches]
+
+    try:
+        await wait_for_llm_evaluation_services(settings=settings, approaches=approaches)
+    except EvaluationServiceError as error:
+        print(error, file=sys.stderr)
+        raise SystemExit(1) from error
 
     with redirect_stdout(sys.stderr):
         results = await run_evaluation_for_approaches(
             dataset_path=args.dataset,
-            approaches=[cast(AgentApproach, approach) for approach in args.approaches],
+            approaches=approaches,
             limit=args.limit,
         )
+
+    summary = summary_to_dataframe(results).to_dict(orient="records")
+    record_llm_evaluation_summary(summary)
+    try:
+        push_metrics_to_gateway(
+            gateway_url=settings.PROMETHEUS_PUSHGATEWAY_URL,
+            job="papergraph_llm_eval",
+        )
+    except OSError as error:
+        print(f"Could not push Prometheus metrics: {error}", file=sys.stderr)
 
     if args.output_dir:
         args.output_dir.mkdir(parents=True, exist_ok=True)
