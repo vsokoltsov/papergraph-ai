@@ -266,22 +266,23 @@ DASHBOARDS = [
             panels=[
                 time_series_panel(
                     1,
-                    "HTTP Requests / sec",
-                    "sum(rate(papergraph_http_requests_total[5m])) by (path)",
+                    "HTTP Requests (5m rolling)",
+                    "sum(increase(papergraph_http_requests_total[5m])) by (path)",
                     "{{path}}",
                     GRAFANA_GRID_POS(h=8, w=12, x=0, y=0),
+                    unit="short",
                 ),
                 gauge_panel(
                     2,
-                    "HTTP p95 Latency",
+                    "HTTP p95 Latency (ms)",
                     "histogram_quantile(0.95, "
-                    "sum(rate(papergraph_http_request_duration_seconds_bucket[5m])) "
-                    "by (le, path))",
+                    "sum(papergraph_http_request_duration_seconds_bucket) "
+                    "by (le, path)) * 1000",
                     "{{path}}",
                     GRAFANA_GRID_POS(h=8, w=12, x=12, y=0),
-                    unit="s",
+                    unit="ms",
                     value_min=0,
-                    value_max=10,
+                    value_max=1000,
                 ),
                 stat_panel(
                     3,
