@@ -5,6 +5,10 @@ services:
     container_name: papergraph-api
     ports:
       - "8000:8000"
+    volumes:
+      - ./app:/app/app
+      - ./migrations:/app/migrations
+      - ./alembic.ini:/app/alembic.ini
     env_file:
       - .env
     environment:
@@ -13,11 +17,74 @@ services:
       POSTGRES_DATABASE_URL: postgresql+asyncpg://papergraph:papergraph@postgres:5432/papergraph
       POSTGRES_SYNC_DATABASE_URL: postgresql+psycopg://papergraph:papergraph@postgres:5432/papergraph
       OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: http://tempo:4318/v1/traces
+    command:
+      - uv
+      - run
+      - uvicorn
+      - app.api:app
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8000"
+      - --reload
+      - --reload-dir
+      - /app/app
+    depends_on:
+      migrate-feedback:
+        condition: service_completed_successfully
+      tempo:
+        condition: service_started
+
+  migrate-feedback:
+    build:
+      context: .
+    container_name: papergraph-migrate-feedback
+    restart: on-failure
+    volumes:
+      - ./app:/app/app
+      - ./migrations:/app/migrations
+      - ./alembic.ini:/app/alembic.ini
+    env_file:
+      - .env
+    environment:
+      POSTGRES_DATABASE_URL: postgresql+asyncpg://papergraph:papergraph@postgres:5432/papergraph
+      POSTGRES_SYNC_DATABASE_URL: postgresql+psycopg://papergraph:papergraph@postgres:5432/papergraph
+    command:
+      - uv
+      - run
+      - alembic
+      - upgrade
+      - feedback@head
+    depends_on:
+      - postgres
+
+  migrate-external:
+    build:
+      context: .
+    container_name: papergraph-migrate-external
+    profiles:
+      - migrations
+    volumes:
+      - ./app:/app/app
+      - ./migrations:/app/migrations
+      - ./alembic.ini:/app/alembic.ini
+    env_file:
+      - .env
+    environment:
+      QDRANT_URL: http://qdrant:6333
+      NEO4J_URI: bolt://neo4j:7687
+      POSTGRES_DATABASE_URL: postgresql+asyncpg://papergraph:papergraph@postgres:5432/papergraph
+      POSTGRES_SYNC_DATABASE_URL: postgresql+psycopg://papergraph:papergraph@postgres:5432/papergraph
+    command:
+      - uv
+      - run
+      - alembic
+      - upgrade
+      - heads
     depends_on:
       - qdrant
       - neo4j
       - postgres
-      - tempo
 
   ui:
     build:
@@ -26,8 +93,18 @@ services:
     container_name: papergraph-ui
     ports:
       - "8501:8501"
+    volumes:
+      - ./app:/app/app
     environment:
       API_URL: http://api:8000
+    command:
+      - streamlit
+      - run
+      - app/ui.py
+      - --server.address=0.0.0.0
+      - --server.port=8501
+      - --server.runOnSave=true
+      - --server.fileWatcherType=poll
     depends_on:
       - api
 
