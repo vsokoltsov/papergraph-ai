@@ -1,3 +1,5 @@
+import json
+from collections.abc import Iterator
 from typing import Any
 
 import httpx
@@ -57,26 +59,45 @@ def run_chat_turn(api_url: str, question: str) -> None:
         st.markdown(question)
 
     with st.chat_message("assistant"):
+        answer = ""
+        events: list[dict[str, Any]] = []
+        run_id = ""
+        answer_placeholder = st.empty()
+        events_placeholder = st.empty()
+
         with st.status("Researching", expanded=True) as status:
             try:
-                result = run_agent(api_url, question)
+                for stream_event in stream_agent(api_url, question):
+                    match stream_event:
+                        case {"type": "run_id", "run_id": value}:
+                            run_id = value
+                        case {"type": "agent_event", "event": event}:
+                            events.append(event)
+                            render_events_placeholder(events_placeholder, events)
+                        case {"type": "answer_delta", "delta": delta}:
+                            answer = append_answer_delta(answer, delta)
+                            answer_placeholder.markdown(answer)
+                        case {"type": "done", "run_id": value, "answer": final_answer}:
+                            run_id = value
+                            answer = final_answer
+                            answer_placeholder.markdown(answer)
+                        case {"type": "error", "message": message}:
+                            raise httpx.HTTPError(message)
             except httpx.HTTPError as error:
                 status.update(label="Request failed", state="error")
                 st.error(f"Backend request failed: {error}")
                 return
 
-            render_events(result["events"])
             status.update(label="Research complete", state="complete")
 
-        st.markdown(result["answer"])
-        render_feedback_form(api_url, result["run_id"])
+        render_feedback_form(api_url, run_id)
 
     st.session_state.messages.append(
         {
             "role": "assistant",
-            "content": result["answer"],
-            "events": result["events"],
-            "run_id": result["run_id"],
+            "content": answer,
+            "events": events,
+            "run_id": run_id,
         }
     )
 
@@ -89,6 +110,34 @@ def run_agent(api_url: str, question: str) -> dict[str, Any]:
         )
         response.raise_for_status()
         return response.json()
+
+
+def stream_agent(api_url: str, question: str) -> Iterator[dict[str, Any]]:
+    with httpx.Client(timeout=120) as client:
+        with client.stream(
+            "POST",
+            f"{api_url.rstrip('/')}/agent/runs/stream",
+            json={"question": question},
+        ) as response:
+            response.raise_for_status()
+            for line in response.iter_lines():
+                event = parse_sse_line(line)
+                if event:
+                    yield event
+
+
+def parse_sse_line(line: str) -> dict[str, Any] | None:
+    if not line.startswith("data: "):
+        return None
+
+    return json.loads(line.removeprefix("data: "))
+
+
+def append_answer_delta(answer: str, delta: str) -> str:
+    if not answer:
+        return delta
+
+    return f"{answer} {delta}"
 
 
 def submit_feedback(
@@ -153,6 +202,14 @@ def render_events(events: list[dict[str, Any]]) -> None:
     st.caption("Agent steps")
     for event in events:
         st.markdown(f"- {format_event(event)}")
+
+
+def render_events_placeholder(placeholder: Any, events: list[dict[str, Any]]) -> None:
+    if not events:
+        return
+
+    lines = ["Agent steps", *[f"- {format_event(event)}" for event in events]]
+    placeholder.markdown("\n".join(lines))
 
 
 def format_event(event: dict[str, Any]) -> str:

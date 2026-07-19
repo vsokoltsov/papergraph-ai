@@ -1,10 +1,13 @@
-from collections.abc import Awaitable, Callable
+import asyncio
+import json
+from collections.abc import AsyncIterator, Awaitable, Callable
 from functools import lru_cache
 from time import monotonic
 from typing import Any, Protocol
 from uuid import uuid4
 
 from fastapi import FastAPI
+from fastapi.responses import StreamingResponse
 from opentelemetry import trace
 from pydantic import BaseModel, Field
 
@@ -24,6 +27,7 @@ from app.tracing import configure_tracing, instrument_fastapi_app
 
 tracer = trace.get_tracer(__name__)
 AgentRunner = Callable[[str], Awaitable[dict[str, Any]]]
+AgentStreamRunner = Callable[[str], AsyncIterator[dict[str, Any]]]
 
 
 class FeedbackWriter(Protocol):
@@ -52,6 +56,7 @@ class FeedbackResponse(BaseModel):
 
 def create_app(
     agent_runner: AgentRunner | None = None,
+    agent_stream_runner: AgentStreamRunner | None = None,
     feedback_repository: FeedbackWriter | None = None,
     settings: Settings | None = None,
 ) -> FastAPI:
@@ -76,6 +81,15 @@ def create_app(
         result = await runner(request.question)
         return AgentRunResponse.model_validate(result)
 
+    @app.post("/agent/runs/stream")
+    async def stream_agent(request: AgentRunRequest) -> StreamingResponse:
+        runner = agent_stream_runner or run_research_agent_stream
+        return StreamingResponse(
+            stream_sse(runner(request.question)),
+            media_type="text/event-stream",
+            headers={"Cache-Control": "no-cache"},
+        )
+
     @app.post("/feedback")
     async def create_feedback(request: FeedbackRequest) -> FeedbackResponse:
         repository = feedback_repository or get_feedback_repository()
@@ -93,10 +107,71 @@ def create_app(
 
 @tracer.start_as_current_span("backend.run_research_agent")
 async def run_research_agent(question: str) -> dict[str, Any]:
+    run_id = str(uuid4())
+    result = await execute_research_agent(question=question, run_id=run_id)
+    return {
+        "run_id": run_id,
+        "answer": result["answer"],
+        "events": result["events"],
+    }
+
+
+async def run_research_agent_stream(question: str) -> AsyncIterator[dict[str, Any]]:
+    run_id = str(uuid4())
+    event_queue: asyncio.Queue[AgentEvent | None] = asyncio.Queue()
+
+    yield {"type": "run_id", "run_id": run_id}
+
+    def emit_stream_event(event: AgentEvent) -> None:
+        event_queue.put_nowait(event)
+
+    task = asyncio.create_task(
+        execute_research_agent(
+            question=question,
+            run_id=run_id,
+            emit_event=emit_stream_event,
+        )
+    )
+
+    while not task.done() or not event_queue.empty():
+        try:
+            event = await asyncio.wait_for(event_queue.get(), timeout=0.1)
+        except TimeoutError:
+            continue
+
+        if event is not None:
+            yield {"type": "agent_event", "event": event}
+
+    try:
+        result = await task
+    except Exception as error:
+        yield {"type": "error", "message": str(error)}
+        return
+
+    for chunk in split_answer_chunks(str(result["answer"])):
+        yield {"type": "answer_delta", "delta": chunk}
+
+    yield {
+        "type": "done",
+        "run_id": run_id,
+        "answer": result["answer"],
+        "events": result["events"],
+    }
+
+
+async def execute_research_agent(
+    question: str,
+    run_id: str,
+    emit_event: Callable[[AgentEvent], None] | None = None,
+) -> dict[str, Any]:
     settings = get_settings()
     events: list[AgentEvent] = []
-    run_id = str(uuid4())
     start = monotonic()
+
+    def collect_event(event: AgentEvent) -> None:
+        events.append(event)
+        if emit_event:
+            emit_event(event)
 
     openalex_client = OpenAlexClient(api_key=settings.OPENALEX_API_KEY)
     qdrant_db = get_qdrant_client(url=settings.QDRANT_URL)
@@ -119,13 +194,13 @@ async def run_research_agent(question: str) -> dict[str, Any]:
         papers_service=papers_service,
         vector_repository=vector_repository,
         graph_repository=graph_repository,
-        emit_event=events.append,
+        emit_event=collect_event,
     )
     agent = ResearchAgent(
         tools=tools,
         model_name=settings.LLM_MODEL,
         api_key=settings.OPENAI_API_KEY,
-        emit_event=events.append,
+        emit_event=collect_event,
     )
 
     answer = await agent.run(question)
@@ -142,7 +217,23 @@ async def run_research_agent(question: str) -> dict[str, Any]:
             duration_seconds=monotonic() - start,
         )
     )
-    return {"run_id": run_id, "answer": answer, "events": events}
+    return {"answer": answer, "events": events}
+
+
+async def stream_sse(events: AsyncIterator[dict[str, Any]]) -> AsyncIterator[str]:
+    async for event in events:
+        yield f"data: {json.dumps(event)}\n\n"
+
+
+def split_answer_chunks(answer: str, chunk_size: int = 24) -> list[str]:
+    words = answer.split(" ")
+    if not words:
+        return [answer]
+
+    chunks = []
+    for index in range(0, len(words), chunk_size):
+        chunks.append(" ".join(words[index : index + chunk_size]))
+    return chunks
 
 
 @lru_cache(maxsize=1)

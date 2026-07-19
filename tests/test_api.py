@@ -45,6 +45,25 @@ def test_agent_runs_endpoint_returns_answer_and_events() -> None:
     }
 
 
+def test_agent_runs_stream_endpoint_returns_sse_events() -> None:
+    app = create_app(
+        agent_runner=_fake_agent_runner,
+        agent_stream_runner=_fake_agent_stream_runner,
+    )
+    client = TestClient(app)
+
+    response = client.post(
+        "/agent/runs/stream",
+        json={"question": "Find graph rag papers"},
+    )
+
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("text/event-stream")
+    assert 'data: {"type": "run_id", "run_id": "run-1"}' in response.text
+    assert 'data: {"type": "answer_delta", "delta": "Graph RAG answer"}' in response.text
+    assert 'data: {"type": "done", "run_id": "run-1"' in response.text
+
+
 def test_metrics_endpoint_exposes_prometheus_metrics() -> None:
     app = create_app(agent_runner=_fake_agent_runner)
     client = TestClient(app)
@@ -183,6 +202,80 @@ async def test_run_research_agent_saves_run(monkeypatch) -> None:
     ]
 
 
+@pytest.mark.asyncio
+async def test_run_research_agent_stream_yields_progress_and_answer(monkeypatch) -> None:
+    async def fake_execute_research_agent(
+        question: str,
+        run_id: str,
+        emit_event: Any = None,
+    ) -> dict[str, Any]:
+        emit_event({"type": "run_start", "input": {"question": question}})
+        return {
+            "answer": "Graph RAG answer",
+            "events": [{"type": "run_start", "input": {"question": question}}],
+        }
+
+    monkeypatch.setattr(api, "uuid4", lambda: "run-1")
+    monkeypatch.setattr(api, "execute_research_agent", fake_execute_research_agent)
+    monkeypatch.setattr(api, "split_answer_chunks", lambda answer: ["Graph RAG", "answer"])
+
+    events = [event async for event in api.run_research_agent_stream("What is GraphRAG?")]
+
+    assert events == [
+        {"type": "run_id", "run_id": "run-1"},
+        {
+            "type": "agent_event",
+            "event": {"type": "run_start", "input": {"question": "What is GraphRAG?"}},
+        },
+        {"type": "answer_delta", "delta": "Graph RAG"},
+        {"type": "answer_delta", "delta": "answer"},
+        {
+            "type": "done",
+            "run_id": "run-1",
+            "answer": "Graph RAG answer",
+            "events": [{"type": "run_start", "input": {"question": "What is GraphRAG?"}}],
+        },
+    ]
+
+
+@pytest.mark.asyncio
+async def test_run_research_agent_stream_yields_error(monkeypatch) -> None:
+    async def fake_execute_research_agent(
+        question: str,
+        run_id: str,
+        emit_event: Any = None,
+    ) -> dict[str, Any]:
+        raise RuntimeError("backend failed")
+
+    monkeypatch.setattr(api, "uuid4", lambda: "run-1")
+    monkeypatch.setattr(api, "execute_research_agent", fake_execute_research_agent)
+
+    events = [event async for event in api.run_research_agent_stream("What is GraphRAG?")]
+
+    assert events == [
+        {"type": "run_id", "run_id": "run-1"},
+        {"type": "error", "message": "backend failed"},
+    ]
+
+
+def test_split_answer_chunks_groups_words() -> None:
+    assert api.split_answer_chunks("one two three four five", chunk_size=2) == [
+        "one two",
+        "three four",
+        "five",
+    ]
+
+
+@pytest.mark.asyncio
+async def test_stream_sse_serializes_events() -> None:
+    async def events() -> Any:
+        yield {"type": "run_id", "run_id": "run-1"}
+
+    serialized = [event async for event in api.stream_sse(events())]
+
+    assert serialized == ['data: {"type": "run_id", "run_id": "run-1"}\n\n']
+
+
 async def _fake_agent_runner(question: str) -> dict[str, Any]:
     return {
         "run_id": "run-1",
@@ -191,6 +284,21 @@ async def _fake_agent_runner(question: str) -> dict[str, Any]:
             {"type": "run_start", "input": {"question": question}},
             {"type": "run_end", "output": {"answer": "Graph RAG answer"}},
         ],
+    }
+
+
+async def _fake_agent_stream_runner(question: str) -> Any:
+    yield {"type": "run_id", "run_id": "run-1"}
+    yield {
+        "type": "agent_event",
+        "event": {"type": "run_start", "input": {"question": question}},
+    }
+    yield {"type": "answer_delta", "delta": "Graph RAG answer"}
+    yield {
+        "type": "done",
+        "run_id": "run-1",
+        "answer": "Graph RAG answer",
+        "events": [{"type": "run_start", "input": {"question": question}}],
     }
 
 
