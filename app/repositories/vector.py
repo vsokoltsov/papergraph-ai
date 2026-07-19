@@ -5,6 +5,14 @@ from typing import Any
 from opentelemetry import trace
 from qdrant_client import AsyncQdrantClient, models
 
+from app.metrics import (
+    VECTOR_PAPERS_UPLOADED_TOTAL,
+    VECTOR_SEARCH_RESULTS_TOTAL,
+    VECTOR_UPLOAD_DURATION_SECONDS,
+    count_argument,
+    count_async_results,
+)
+
 Vector = models.Document | list[float]
 tracer = trace.get_tracer(__name__)
 
@@ -14,6 +22,8 @@ class VectorRepository:
     db: AsyncQdrantClient
     collection_name: str
 
+    @VECTOR_UPLOAD_DURATION_SECONDS.time()
+    @count_argument(VECTOR_PAPERS_UPLOADED_TOTAL, "ids")
     @tracer.start_as_current_span("vector.upload_papers")
     def upload_papers(
         self,
@@ -28,6 +38,7 @@ class VectorRepository:
             payload=payload,
         )
 
+    @count_async_results(VECTOR_SEARCH_RESULTS_TOTAL)
     @tracer.start_as_current_span("vector.search_papers")
     async def search_papers(
         self,

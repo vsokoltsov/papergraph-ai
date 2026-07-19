@@ -4,6 +4,14 @@ from typing import LiteralString
 from neo4j import AsyncDriver, AsyncManagedTransaction
 from opentelemetry import trace
 
+from app.metrics import (
+    GRAPH_CONTEXT_RESULTS_TOTAL,
+    GRAPH_PAPERS_UPSERTED_TOTAL,
+    GRAPH_SEARCH_RESULTS_TOTAL,
+    count_async_argument,
+    count_async_results,
+)
+
 tracer = trace.get_tracer(__name__)
 OPENALEX_URL_PREFIX = "https://openalex.org/"
 
@@ -250,6 +258,7 @@ class GraphRepository:
         await self.upsert_primary_topic(article)
         await self.upsert_references(article)
 
+    @count_async_argument(GRAPH_PAPERS_UPSERTED_TOTAL, "articles")
     @tracer.start_as_current_span("graph.upsert_articles_graph")
     async def upsert_articles_graph(self, articles) -> None:
         articles = list(articles)
@@ -462,6 +471,7 @@ class GraphRepository:
             reference_rows,
         )
 
+    @count_async_results(GRAPH_CONTEXT_RESULTS_TOTAL)
     @tracer.start_as_current_span("graph.get_paper_context")
     async def get_paper_context(self, openalex_ids: list[str]) -> list[dict]:
         if not openalex_ids:
@@ -544,8 +554,10 @@ class GraphRepository:
                 """,
                 openalex_ids=normalized_openalex_ids,
             )
-            return await result.data()
+            rows = await result.data()
+            return rows
 
+    @count_async_results(GRAPH_SEARCH_RESULTS_TOTAL)
     @tracer.start_as_current_span("graph.search_papers")
     async def search_papers(self, query: str, limit: int = 5) -> list[dict]:
         search_tokens = search_query_tokens(query)
@@ -595,7 +607,8 @@ class GraphRepository:
                 search_tokens=search_tokens,
                 limit=limit,
             )
-            return await result.data()
+            rows = await result.data()
+            return rows
 
     @tracer.start_as_current_span("graph.run_bulk")
     async def _run_bulk(self, query: LiteralString, rows: list[dict]) -> None:
