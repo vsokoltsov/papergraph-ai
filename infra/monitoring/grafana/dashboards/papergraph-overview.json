@@ -61,7 +61,7 @@
             "mode": "absolute",
             "steps": []
           },
-          "unit": ""
+          "unit": "short"
         },
         "overrides": []
       },
@@ -96,7 +96,7 @@
       "targets": [
         {
           "datasource": null,
-          "expr": "sum(rate(papergraph_http_requests_total[5m])) by (path)",
+          "expr": "sum(increase(papergraph_http_requests_total[5m])) by (path)",
           "format": "time_series",
           "hide": false,
           "instant": false,
@@ -104,7 +104,7 @@
           "intervalFactor": 2,
           "legendFormat": "{{path}}",
           "metric": "",
-          "query": "sum(rate(papergraph_http_requests_total[5m])) by (path)",
+          "query": "sum(increase(papergraph_http_requests_total[5m])) by (path)",
           "refId": "",
           "step": 10,
           "target": ""
@@ -112,7 +112,7 @@
       ],
       "timeFrom": null,
       "timeShift": null,
-      "title": "HTTP Requests / sec",
+      "title": "HTTP Requests (5m rolling)",
       "transformations": [],
       "transparent": false,
       "type": "timeseries"
@@ -135,7 +135,7 @@
           "limit": null,
           "links": [],
           "mappings": [],
-          "max": 10,
+          "max": 1000,
           "min": 0,
           "override": {},
           "thresholds": {
@@ -160,7 +160,7 @@
             ]
           },
           "title": null,
-          "unit": "s",
+          "unit": "ms",
           "values": false
         },
         "showThresholdLabels": false,
@@ -186,7 +186,7 @@
       "targets": [
         {
           "datasource": null,
-          "expr": "histogram_quantile(0.95, sum(rate(papergraph_http_request_duration_seconds_bucket[5m])) by (le, path))",
+          "expr": "histogram_quantile(0.95, sum(papergraph_http_request_duration_seconds_bucket) by (le, path)) * 1000",
           "format": "time_series",
           "hide": false,
           "instant": false,
@@ -194,7 +194,7 @@
           "intervalFactor": 2,
           "legendFormat": "{{path}}",
           "metric": "",
-          "query": "histogram_quantile(0.95, sum(rate(papergraph_http_request_duration_seconds_bucket[5m])) by (le, path))",
+          "query": "histogram_quantile(0.95, sum(papergraph_http_request_duration_seconds_bucket) by (le, path)) * 1000",
           "refId": "",
           "step": 10,
           "target": ""
@@ -202,7 +202,7 @@
       ],
       "timeFrom": null,
       "timeShift": null,
-      "title": "HTTP p95 Latency",
+      "title": "HTTP p95 Latency (ms)",
       "transformations": [],
       "transparent": false,
       "type": "gauge"
