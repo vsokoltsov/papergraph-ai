@@ -15,7 +15,10 @@ def main() -> None:
 
     for dashboard_file in DASHBOARDS:
         output_path = OUTPUT_DIR / dashboard_file.name
-        dashboard_json = dashboard_file.dashboard.to_json_data()
+        if hasattr(dashboard_file.dashboard, "to_json_data"):
+            dashboard_json = dashboard_file.dashboard.to_json_data()
+        else:
+            dashboard_json = dashboard_file.dashboard
         output_path.write_text(
             json.dumps(dashboard_json, cls=DashboardEncoder, indent=2, sort_keys=True) + "\n"
         )

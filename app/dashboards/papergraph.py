@@ -30,7 +30,9 @@ GRAFANA_TIME = cast(Any, Time)
 GRAFANA_TIME_SERIES = cast(Any, TimeSeries)
 
 PROMETHEUS = {"type": "prometheus", "uid": "Prometheus"}
+POSTGRES = {"type": "postgres", "uid": "PostgreSQL"}
 DEFAULT_TIME_RANGE = GRAFANA_TIME("now-5m", "now")
+DEFAULT_TIME_RANGE_JSON = {"from": "now-5m", "to": "now"}
 SCHEMA_VERSION = 39
 
 
@@ -57,6 +59,25 @@ def dashboard(
         time=DEFAULT_TIME_RANGE,
         panels=panels,
     )
+
+
+def json_dashboard(
+    uid: str,
+    title: str,
+    tags: list[str],
+    panels: list[dict[str, Any]],
+) -> dict[str, Any]:
+    return {
+        "title": title,
+        "uid": uid,
+        "tags": tags,
+        "timezone": "browser",
+        "schemaVersion": SCHEMA_VERSION,
+        "version": 1,
+        "refresh": "10s",
+        "time": DEFAULT_TIME_RANGE_JSON,
+        "panels": panels,
+    }
 
 
 def target(expr: str, legend: str) -> Any:
@@ -202,6 +223,37 @@ def bar_chart_panel(
         targets=[target(expr, legend)],
         showValue="always",
     )
+
+
+def sql_target(query: str, ref_id: str = "A", result_format: str = "table") -> dict[str, Any]:
+    return {
+        "datasource": POSTGRES,
+        "format": result_format,
+        "rawSql": query,
+        "refId": ref_id,
+    }
+
+
+def sql_panel(
+    panel_id: int,
+    title: str,
+    panel_type: str,
+    query: str,
+    grid: dict[str, int],
+    result_format: str = "table",
+    options: dict[str, Any] | None = None,
+    field_config: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    return {
+        "id": panel_id,
+        "title": title,
+        "type": panel_type,
+        "datasource": POSTGRES,
+        "gridPos": grid,
+        "targets": [sql_target(query, result_format=result_format)],
+        "options": options or {},
+        "fieldConfig": field_config or {"defaults": {}, "overrides": []},
+    }
 
 
 DASHBOARDS = [
@@ -471,6 +523,126 @@ DASHBOARDS = [
                     unit="s",
                     value_min=0,
                     value_max=120,
+                ),
+            ],
+        ),
+    ),
+    DashboardFile(
+        name="papergraph-feedback.json",
+        dashboard=json_dashboard(
+            uid="papergraph-feedback",
+            title="PaperGraph User Feedback",
+            tags=["papergraph", "feedback", "monitoring"],
+            panels=[
+                sql_panel(
+                    1,
+                    "Feedback / min",
+                    "timeseries",
+                    """
+                    SELECT
+                        $__timeGroupAlias(f.created_at, '1m'),
+                        f.rating AS metric,
+                        count(*) AS value
+                    FROM feedback f
+                    WHERE $__timeFilter(f.created_at)
+                    GROUP BY 1, 2
+                    ORDER BY 1
+                    """,
+                    {"h": 8, "w": 12, "x": 0, "y": 0},
+                    result_format="time_series",
+                ),
+                sql_panel(
+                    2,
+                    "Rating Split",
+                    "piechart",
+                    """
+                    SELECT
+                        rating AS metric,
+                        count(*) AS value
+                    FROM feedback
+                    WHERE $__timeFilter(created_at)
+                    GROUP BY rating
+                    ORDER BY value DESC
+                    """,
+                    {"h": 8, "w": 12, "x": 12, "y": 0},
+                    options={
+                        "pieType": "donut",
+                        "legend": {
+                            "displayMode": "list",
+                            "placement": "right",
+                        },
+                    },
+                ),
+                sql_panel(
+                    3,
+                    "Negative Feedback Rate",
+                    "gauge",
+                    """
+                    SELECT
+                        COALESCE(
+                            count(*) FILTER (WHERE rating = 'thumbs_down')::double precision
+                            / NULLIF(count(*), 0),
+                            0
+                        ) AS value
+                    FROM feedback
+                    WHERE $__timeFilter(created_at)
+                    """,
+                    {"h": 8, "w": 8, "x": 0, "y": 8},
+                    field_config={
+                        "defaults": {"unit": "percentunit", "min": 0, "max": 1},
+                        "overrides": [],
+                    },
+                ),
+                sql_panel(
+                    4,
+                    "Average Tokens by Rating",
+                    "barchart",
+                    """
+                    SELECT
+                        f.rating AS metric,
+                        avg(a.total_tokens) AS value
+                    FROM feedback f
+                    JOIN agent_runs a ON a.run_id = f.run_id
+                    WHERE $__timeFilter(f.created_at)
+                    GROUP BY f.rating
+                    ORDER BY value DESC
+                    """,
+                    {"h": 8, "w": 8, "x": 8, "y": 8},
+                ),
+                sql_panel(
+                    5,
+                    "Average Latency by Rating",
+                    "bargauge",
+                    """
+                    SELECT
+                        f.rating AS metric,
+                        avg(a.duration_seconds) AS value
+                    FROM feedback f
+                    JOIN agent_runs a ON a.run_id = f.run_id
+                    WHERE $__timeFilter(f.created_at)
+                    GROUP BY f.rating
+                    ORDER BY value DESC
+                    """,
+                    {"h": 8, "w": 8, "x": 16, "y": 8},
+                    field_config={"defaults": {"unit": "s"}, "overrides": []},
+                ),
+                sql_panel(
+                    6,
+                    "Recent Feedback Comments",
+                    "table",
+                    """
+                    SELECT
+                        f.created_at,
+                        f.rating,
+                        a.question,
+                        f.comment
+                    FROM feedback f
+                    JOIN agent_runs a ON a.run_id = f.run_id
+                    WHERE $__timeFilter(f.created_at)
+                    ORDER BY f.created_at DESC
+                    LIMIT 25
+                    """,
+                    {"h": 8, "w": 24, "x": 0, "y": 16},
                 ),
             ],
         ),
