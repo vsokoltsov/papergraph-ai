@@ -5,9 +5,12 @@ import httpx
 import app.ui as ui
 from app.ui import (
     append_answer_delta,
+    append_visible_event,
+    deduplicate_visible_events,
     format_event,
     handle_feedback_submit,
     parse_sse_line,
+    render_feedback_form,
     run_agent,
     run_chat_turn,
     stream_agent,
@@ -118,8 +121,10 @@ def test_stream_agent_yields_sse_events(monkeypatch) -> None:
     fake_client = FakeHttpxClient(
         response={"unused": True},
         stream_lines=[
+            "event: run_id",
             'data: {"type": "run_id", "run_id": "run-1"}',
             "",
+            "event: answer_delta",
             'data: {"type": "answer_delta", "delta": "Answer"}',
         ],
     )
@@ -152,6 +157,92 @@ def test_append_answer_delta_adds_spacing() -> None:
     assert append_answer_delta("Hello", "world") == "Hello world"
 
 
+def test_append_visible_event_ignores_consecutive_duplicates() -> None:
+    events: list[dict[str, Any]] = []
+    event = {
+        "type": "tool_start",
+        "tool": "get_graph_context",
+        "input": {"openalex_ids": ["W1"]},
+    }
+
+    append_visible_event(events, event)
+    append_visible_event(events, event)
+
+    assert events == [event]
+
+
+def test_append_visible_event_compares_rendered_text() -> None:
+    events: list[dict[str, Any]] = []
+
+    append_visible_event(
+        events,
+        {
+            "type": "tool_start",
+            "tool": "get_graph_context",
+            "input": {"openalex_ids": ["W1"]},
+            "internal": "first",
+        },
+    )
+    append_visible_event(
+        events,
+        {
+            "type": "tool_start",
+            "tool": "get_graph_context",
+            "input": {"openalex_ids": ["W2"]},
+            "internal": "second",
+        },
+    )
+
+    assert len(events) == 1
+    assert format_event(events[0]) == "Called `get_graph_context` for `1` paper(s)"
+
+
+def test_deduplicate_visible_events_removes_rendered_duplicates() -> None:
+    events = [
+        {
+            "type": "tool_end",
+            "tool": "get_graph_context",
+            "output": {"count": 1},
+        },
+        {
+            "type": "tool_end",
+            "tool": "get_graph_context",
+            "output": {"count": 1},
+            "internal": "duplicate",
+        },
+    ]
+
+    assert deduplicate_visible_events(events) == [events[0]]
+
+
+def test_render_feedback_form_displays_buttons(monkeypatch) -> None:
+    fake_streamlit = FakeStreamlit()
+    monkeypatch.setattr(ui, "st", fake_streamlit)
+
+    render_feedback_form("http://api", "run-1")
+
+    assert fake_streamlit.captions == ["Was this answer useful?"]
+    assert fake_streamlit.text_inputs == [
+        {
+            "label": "Optional feedback comment",
+            "key": "feedback_comment_run-1",
+            "placeholder": "What was useful or missing?",
+        }
+    ]
+    assert fake_streamlit.buttons == [
+        {
+            "label": "Useful",
+            "key": "feedback_up_run-1",
+            "help": "Mark answer as useful",
+        },
+        {
+            "label": "Not useful",
+            "key": "feedback_down_run-1",
+            "help": "Mark answer as not useful",
+        },
+    ]
+
+
 def test_run_chat_turn_streams_answer_and_saves_message(monkeypatch) -> None:
     fake_streamlit = FakeStreamlit()
     feedback_calls: list[tuple[str, str]] = []
@@ -162,6 +253,10 @@ def test_run_chat_turn_streams_answer_and_saves_message(monkeypatch) -> None:
         lambda api_url, question: iter(
             [
                 {"type": "run_id", "run_id": "run-1"},
+                {
+                    "type": "agent_event",
+                    "event": {"type": "run_start", "input": {"question": question}},
+                },
                 {
                     "type": "agent_event",
                     "event": {"type": "run_start", "input": {"question": question}},
@@ -189,9 +284,11 @@ def test_run_chat_turn_streams_answer_and_saves_message(monkeypatch) -> None:
             "run_id": "run-1",
         },
     ]
-    assert fake_streamlit.status_updates == [
-        {"label": "Research complete", "state": "complete"},
-    ]
+    assert fake_streamlit.status_calls[-1] == {
+        "label": "Research complete",
+        "state": "complete",
+        "expanded": True,
+    }
     assert feedback_calls == [("http://api", "run-1")]
 
 
@@ -209,7 +306,11 @@ def test_run_chat_turn_displays_stream_error(monkeypatch) -> None:
     assert fake_streamlit.session_state.messages == [
         {"role": "user", "content": "What is GraphRAG?"}
     ]
-    assert fake_streamlit.status_updates == [{"label": "Request failed", "state": "error"}]
+    assert fake_streamlit.status_calls[-1] == {
+        "label": "Request failed",
+        "state": "error",
+        "expanded": True,
+    }
     assert fake_streamlit.errors == ["Backend request failed: backend failed"]
 
 
@@ -315,11 +416,15 @@ class FakeContext:
 
 
 class FakePlaceholder:
-    def __init__(self) -> None:
+    def __init__(self, streamlit: "FakeStreamlit") -> None:
+        self.streamlit = streamlit
         self.markdown_calls: list[str] = []
 
     def markdown(self, value: str) -> None:
         self.markdown_calls.append(value)
+
+    def container(self) -> FakeContext:
+        return FakeContext(self.streamlit)
 
 
 class FakeStreamlit:
@@ -327,20 +432,50 @@ class FakeStreamlit:
         self.session_state = FakeSessionState()
         self.toasts: list[str] = []
         self.errors: list[str] = []
+        self.buttons: list[dict[str, str]] = []
+        self.captions: list[str] = []
         self.markdown_calls: list[str] = []
+        self.status_calls: list[dict[str, str | bool]] = []
         self.status_updates: list[dict[str, str]] = []
+        self.text_inputs: list[dict[str, str]] = []
 
     def chat_message(self, role: str) -> FakeContext:
         return FakeContext(self)
 
-    def status(self, label: str, expanded: bool) -> FakeContext:
+    def status(
+        self,
+        label: str,
+        expanded: bool,
+        state: str = "running",
+    ) -> FakeContext:
+        self.status_calls.append({"label": label, "state": state, "expanded": expanded})
         return FakeContext(self)
 
     def empty(self) -> FakePlaceholder:
-        return FakePlaceholder()
+        return FakePlaceholder(self)
 
     def markdown(self, value: str) -> None:
         self.markdown_calls.append(value)
+
+    def caption(self, value: str) -> None:
+        self.captions.append(value)
+
+    def text_input(self, label: str, key: str, placeholder: str) -> str:
+        self.text_inputs.append(
+            {
+                "label": label,
+                "key": key,
+                "placeholder": placeholder,
+            }
+        )
+        return ""
+
+    def columns(self, count: int) -> list[FakeContext]:
+        return [FakeContext(self) for _ in range(count)]
+
+    def button(self, label: str, key: str, help: str) -> bool:
+        self.buttons.append({"label": label, "key": key, "help": help})
+        return False
 
     def toast(self, message: str) -> None:
         self.toasts.append(message)

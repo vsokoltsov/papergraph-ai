@@ -73,6 +73,10 @@ def test_metrics_endpoint_exposes_prometheus_metrics() -> None:
 
     assert response.status_code == 200
     assert "papergraph_http_requests_total" in response.text
+    assert (
+        'papergraph_http_requests_total{method="POST",path="/agent/runs/stream",status="200"}'
+        in response.text
+    )
 
 
 def test_feedback_endpoint_stores_feedback() -> None:
@@ -223,10 +227,13 @@ async def test_run_research_agent_stream_yields_progress_and_answer(monkeypatch)
 
     assert events == [
         {"type": "run_id", "run_id": "run-1"},
+        {"type": "status", "message": "Preparing research tools"},
+        {"type": "status", "message": "Running agent"},
         {
             "type": "agent_event",
             "event": {"type": "run_start", "input": {"question": "What is GraphRAG?"}},
         },
+        {"type": "status", "message": "Streaming final answer"},
         {"type": "answer_delta", "delta": "Graph RAG"},
         {"type": "answer_delta", "delta": "answer"},
         {
@@ -254,6 +261,8 @@ async def test_run_research_agent_stream_yields_error(monkeypatch) -> None:
 
     assert events == [
         {"type": "run_id", "run_id": "run-1"},
+        {"type": "status", "message": "Preparing research tools"},
+        {"type": "status", "message": "Running agent"},
         {"type": "error", "message": "backend failed"},
     ]
 
@@ -273,7 +282,7 @@ async def test_stream_sse_serializes_events() -> None:
 
     serialized = [event async for event in api.stream_sse(events())]
 
-    assert serialized == ['data: {"type": "run_id", "run_id": "run-1"}\n\n']
+    assert serialized == ['event: run_id\ndata: {"type": "run_id", "run_id": "run-1"}\n\n']
 
 
 async def _fake_agent_runner(question: str) -> dict[str, Any]:
