@@ -60,6 +60,14 @@ services:
     command:
       - "--config.file=/etc/prometheus/prometheus.yml"
       - "--storage.tsdb.path=/prometheus"
+    depends_on:
+      - pushgateway
+
+  pushgateway:
+    image: prom/pushgateway:latest
+    container_name: papergraph-pushgateway
+    ports:
+      - "9091:9091"
 
   tempo:
     image: grafana/tempo:latest
@@ -76,13 +84,14 @@ services:
       - "-config.file=/etc/tempo.yml"
 
   grafana:
-    image: grafana/grafana-oss:latest
+    image: grafana/grafana-oss:11.6.0
     container_name: papergraph-grafana
     ports:
       - "3000:3000"
     environment:
-      GF_SECURITY_ADMIN_USER: admin
-      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Admin
+      GF_AUTH_DISABLE_LOGIN_FORM: "true"
     volumes:
       - grafana_storage:/var/lib/grafana
       - ./infra/monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
