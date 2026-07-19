@@ -29,6 +29,13 @@ HTTP_REQUEST_DURATION_SECONDS = Histogram(
     "HTTP request duration in seconds.",
     ["method", "path"],
 )
+KNOWN_HTTP_ROUTES = (
+    ("GET", "/health", "200"),
+    ("POST", "/agent/runs", "200"),
+    ("POST", "/agent/runs/stream", "200"),
+    ("POST", "/feedback", "200"),
+    ("POST", "/feedback", "422"),
+)
 AGENT_RUNS_TOTAL = Counter(
     "papergraph_agent_runs_total",
     "Total agent runs.",
@@ -141,11 +148,19 @@ class PrometheusMiddleware(BaseHTTPMiddleware):
 def instrument_prometheus(app: FastAPI) -> None:
     """Expose Prometheus metrics and install request instrumentation."""
 
+    initialize_http_metrics()
     app.add_middleware(PrometheusMiddleware)
 
     @app.get("/metrics", include_in_schema=False)
     async def metrics() -> Response:
         return Response(generate_latest(), media_type=CONTENT_TYPE_LATEST)
+
+
+def initialize_http_metrics() -> None:
+    """Create zero-valued HTTP metric series for known API routes."""
+
+    for method, path, status in KNOWN_HTTP_ROUTES:
+        HTTP_REQUESTS_TOTAL.labels(method=method, path=path, status=status).inc(0)
 
 
 def track_agent_run[F: Callable[..., Any]](func: F) -> F:
