@@ -417,15 +417,15 @@
       "targets": [
         {
           "datasource": null,
-          "expr": "sum(papergraph_agent_tool_calls_total{tool=\"ingest_papers\"})",
+          "expr": "sum(papergraph_ingestion_runs_total) by (status)",
           "format": "time_series",
           "hide": false,
           "instant": false,
           "interval": "",
           "intervalFactor": 2,
-          "legendFormat": "ingest_papers",
+          "legendFormat": "{{status}}",
           "metric": "",
-          "query": "sum(papergraph_agent_tool_calls_total{tool=\"ingest_papers\"})",
+          "query": "sum(papergraph_ingestion_runs_total) by (status)",
           "refId": "",
           "step": 10,
           "target": ""
@@ -433,7 +433,7 @@
       ],
       "timeFrom": null,
       "timeShift": null,
-      "title": "Ingestion Tool Calls",
+      "title": "Ingestion Runs",
       "transformations": [],
       "transparent": false,
       "type": "stat"
@@ -456,7 +456,7 @@
           "limit": null,
           "links": [],
           "mappings": [],
-          "max": 120,
+          "max": 120000,
           "min": 0,
           "override": {},
           "thresholds": {
@@ -481,7 +481,7 @@
             ]
           },
           "title": null,
-          "unit": "s",
+          "unit": "ms",
           "values": false
         },
         "showThresholdLabels": false,
@@ -507,7 +507,7 @@
       "targets": [
         {
           "datasource": null,
-          "expr": "histogram_quantile(0.95, sum(papergraph_agent_tool_duration_seconds_bucket{tool=\"ingest_papers\"}) by (le))",
+          "expr": "histogram_quantile(0.95, sum(papergraph_ingestion_run_duration_seconds_bucket) by (le)) * 1000",
           "format": "time_series",
           "hide": false,
           "instant": false,
@@ -515,7 +515,7 @@
           "intervalFactor": 2,
           "legendFormat": "p95",
           "metric": "",
-          "query": "histogram_quantile(0.95, sum(papergraph_agent_tool_duration_seconds_bucket{tool=\"ingest_papers\"}) by (le))",
+          "query": "histogram_quantile(0.95, sum(papergraph_ingestion_run_duration_seconds_bucket) by (le)) * 1000",
           "refId": "",
           "step": 10,
           "target": ""
@@ -523,7 +523,7 @@
       ],
       "timeFrom": null,
       "timeShift": null,
-      "title": "Ingestion Tool p95 Duration",
+      "title": "Ingestion Tool p95 Duration (ms)",
       "transformations": [],
       "transparent": false,
       "type": "gauge"

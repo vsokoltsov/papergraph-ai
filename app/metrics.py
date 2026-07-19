@@ -75,6 +75,19 @@ OPENALEX_ARTICLES_TOTAL = Counter(
     "papergraph_openalex_articles_total",
     "Total OpenAlex articles returned.",
 )
+INGESTION_RUNS_TOTAL = Counter(
+    "papergraph_ingestion_runs_total",
+    "Total ingestion runs.",
+    ["status"],
+)
+INGESTION_RUN_DURATION_SECONDS = Histogram(
+    "papergraph_ingestion_run_duration_seconds",
+    "Ingestion run duration in seconds.",
+)
+DLT_RECORDS_STAGED_TOTAL = Counter(
+    "papergraph_dlt_records_staged_total",
+    "Total records staged with dlt.",
+)
 VECTOR_PAPERS_UPLOADED_TOTAL = Counter(
     "papergraph_vector_papers_uploaded_total",
     "Total papers uploaded to the vector database.",
