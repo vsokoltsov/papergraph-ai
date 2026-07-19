@@ -3,6 +3,92 @@
 [![CI](https://github.com/vsokoltsov/papergraph-ai/actions/workflows/ci.yml/badge.svg)](https://github.com/vsokoltsov/papergraph-ai/actions/workflows/ci.yml)
 [![codecov](https://codecov.io/gh/vsokoltsov/papergraph-ai/branch/main/graph/badge.svg)](https://codecov.io/gh/vsokoltsov/papergraph-ai)
 
+## 🧩 Problem Description
+
+PaperGraph AI helps researchers explore scientific papers from OpenAlex with an agentic AI
+workflow. The app ingests paper metadata and abstracts, stores semantic content in Qdrant, stores
+paper relationships in Neo4j, and lets an LLM agent combine vector retrieval with graph context.
+
+The main goal is to answer research questions such as:
+
+- Which papers discuss a specific topic?
+- How do papers relate by topic, source, author, institution, or citation?
+- What are the main research directions across a retrieved set of papers?
+
+The system is built around an automated ingestion pipeline, an agentic retrieval layer, evaluation
+scripts, feedback collection, and Grafana monitoring dashboards.
+
+## 💬 UI Interface
+
+The user interface is a Streamlit chat app.
+
+It provides:
+
+- A chat input for research questions.
+- Real-time agent progress in the research section.
+- Final answers generated from retrieved paper context.
+- Feedback buttons for marking answers as useful or not useful.
+- Backend streaming from the FastAPI API to the UI.
+
+Local URLs:
+
+- 🖥️ Streamlit UI: `http://localhost:8501`
+- 🚀 FastAPI backend: `http://localhost:8000`
+- 📊 Grafana dashboards: `http://localhost:3000`
+- 📈 Prometheus: `http://localhost:9090`
+- 🧠 Neo4j Browser: `http://localhost:7474`
+- 🔎 Qdrant API: `http://localhost:6333`
+
+## 🚀 How To Run The Project
+
+Install dependencies:
+
+```bash
+uv sync
+```
+
+Start the infrastructure:
+
+```bash
+docker compose up -d
+```
+
+Run migrations:
+
+```bash
+uv run alembic upgrade heads
+```
+
+Ingest papers from OpenAlex with dlt:
+
+```bash
+uv run python -m app.ingestion.run "mathematics" --limit 10
+```
+
+Start the backend locally:
+
+```bash
+make backend
+```
+
+Start the UI locally:
+
+```bash
+make ui
+```
+
+Alternatively, the API and UI are also included in `docker-compose.yml`, so a full Docker run is:
+
+```bash
+docker compose up -d --build
+```
+
+Run checks:
+
+```bash
+make check
+```
+
 ## LLM Evaluation
 
 The project uses the course-style LLM evaluation flow:
