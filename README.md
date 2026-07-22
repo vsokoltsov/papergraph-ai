@@ -9,6 +9,7 @@
 ![FastAPI](https://img.shields.io/badge/FastAPI-API-009688?logo=fastapi&logoColor=white)
 ![Streamlit](https://img.shields.io/badge/Streamlit-UI-FF4B4B?logo=streamlit&logoColor=white)
 ![LangChain](https://img.shields.io/badge/LangChain-Agent-1C3C3C)
+![LangGraph](https://img.shields.io/badge/LangGraph-Agent_Graph-1C3C3C)
 ![OpenAI](https://img.shields.io/badge/OpenAI-LLM-412991?logo=openai&logoColor=white)
 ![OpenAlex](https://img.shields.io/badge/OpenAlex-Papers-2B6CB0)
 ![Qdrant](https://img.shields.io/badge/Qdrant-Vector_DB-DC244C)
@@ -17,6 +18,7 @@
 ![dlt](https://img.shields.io/badge/dlt-Ingestion-F5CD21)
 ![Grafana](https://img.shields.io/badge/Grafana-Monitoring-F46800?logo=grafana&logoColor=white)
 ![Prometheus](https://img.shields.io/badge/Prometheus-Metrics-E6522C?logo=prometheus&logoColor=white)
+![Logfire](https://img.shields.io/badge/Logfire-Observability-EF5B25)
 ![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)
 
 ## 🧩 Problem Description
@@ -240,6 +242,25 @@ Response:
   "status": "ok"
 }
 ```
+
+## 📡 Observability
+
+Local observability uses Prometheus, Grafana, and Tempo from `docker-compose.yml`.
+
+External observability can also be sent to Pydantic Logfire. Set the Logfire write token in `.env`:
+
+```bash
+LOGFIRE_ENABLED=true
+LOGFIRE_TOKEN=your-logfire-write-token
+```
+
+`LOGFIRE_TOKEN` is the official Logfire environment variable. The app also accepts
+`LOGFIRE_API_KEY` for compatibility with older local `.env` files.
+
+When enabled, the app configures Logfire once in `app/tracing.py`, instruments FastAPI requests,
+HTTPX calls, OpenAI SDK calls, and failed Pydantic validations, and forwards existing OpenTelemetry
+spans to Logfire. If `OTEL_TRACING_ENABLED=true`, the same spans are also exported to the local
+OTLP endpoint used by Tempo.
 
 ## LLM Evaluation
 
