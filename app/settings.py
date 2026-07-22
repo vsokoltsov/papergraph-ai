@@ -25,6 +25,9 @@ class Settings(BaseSettings):
     OTEL_TRACING_ENABLED: bool = False
     OTEL_SERVICE_NAME: str = "papergraph-ai"
     OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: str = "http://localhost:4318/v1/traces"
+    LOGFIRE_ENABLED: bool = True
+    LOGFIRE_TOKEN: str = ""
+    LOGFIRE_API_KEY: str = ""
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
