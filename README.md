@@ -10,6 +10,7 @@
 ![Streamlit](https://img.shields.io/badge/Streamlit-UI-FF4B4B?logo=streamlit&logoColor=white)
 ![LangChain](https://img.shields.io/badge/LangChain-Agent-1C3C3C)
 ![LangGraph](https://img.shields.io/badge/LangGraph-Agent_Graph-1C3C3C)
+![MCP](https://img.shields.io/badge/MCP-Agent_Tools-000000)
 ![OpenAI](https://img.shields.io/badge/OpenAI-LLM-412991?logo=openai&logoColor=white)
 ![OpenAlex](https://img.shields.io/badge/OpenAlex-Papers-2B6CB0)
 ![Qdrant](https://img.shields.io/badge/Qdrant-Vector_DB-DC244C)
