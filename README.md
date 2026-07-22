@@ -53,6 +53,15 @@ The LLM evaluation compares `vector_only`, `graph_only`, and `vector_plus_graph`
 retrieval evaluation compares Qdrant vector search, Neo4j graph search, and the combined
 vector-plus-graph strategy.
 
+The research agent itself is implemented as an explicit LangGraph workflow:
+
+```text
+rewrite query -> retrieve documents -> rerank documents -> fetch graph context -> generate answer
+```
+
+This keeps tool usage predictable, prevents unnecessary repeated retrieval calls, and makes each
+agent step visible in the streamed research events.
+
 ## 💬 UI Interface
 
 The user interface is a Streamlit chat app.
