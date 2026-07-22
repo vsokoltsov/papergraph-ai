@@ -252,6 +252,34 @@ Response:
 }
 ```
 
+## 🧰 MCP Server
+
+PaperGraph AI exposes a local MCP server so MCP-compatible clients can use the same paper search,
+graph context, ingestion, and agent workflow as the API and UI.
+
+Run it with stdio transport:
+
+```bash
+make mcp
+```
+
+Available MCP tools:
+
+- `search_papers`: semantic search over stored Qdrant paper titles and abstracts.
+- `search_paper_graph`: keyword search over stored Neo4j paper metadata and relationships.
+- `get_paper_graph_context`: graph context lookup for OpenAlex paper IDs.
+- `ingest_openalex_papers`: search OpenAlex and store results in Qdrant and Neo4j.
+- `ask_papergraph`: run the full PaperGraph research agent and return the answer plus events.
+
+When Logfire is enabled, MCP tool calls emit structured `mcp.*` spans with bounded query/question
+attributes and result counts.
+
+Suggested commit split for this MCP feature:
+
+- `Add MCP SDK dependency`: `pyproject.toml`, `uv.lock`
+- `Add PaperGraph MCP server`: `app/mcp.py`, `tests/test_mcp.py`
+- `Document MCP server command`: `Makefile`, `README.md`
+
 ## 📡 Observability
 
 Local observability uses Prometheus, Grafana, and Tempo from `docker-compose.yml`.

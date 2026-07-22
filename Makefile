@@ -1,6 +1,6 @@
 PYTHON_TARGETS = app migrations tests
 
-.PHONY: check lint format-check typecheck test dashboards ingest-openalex eval-services eval-retrieval eval-llm generate-llm-ground-truth backend ui fix format
+.PHONY: check lint format-check typecheck test dashboards ingest-openalex eval-services eval-retrieval eval-llm generate-llm-ground-truth backend ui mcp fix format
 
 check: lint format-check typecheck test
 
@@ -39,6 +39,9 @@ backend:
 
 ui:
 	uv run streamlit run app/ui.py
+
+mcp:
+	uv run python -m app.mcp
 
 fix:
 	uv run ruff check $(PYTHON_TARGETS) --fix
