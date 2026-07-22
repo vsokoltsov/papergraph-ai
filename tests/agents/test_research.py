@@ -5,6 +5,7 @@ from typing import Any
 import pytest
 
 from app.agents.research import (
+    ResearchAgent,
     create_research_tools,
     format_agent_event,
     rerank_documents,
@@ -31,7 +32,7 @@ class FakePapersService:
 class FakeVectorRepository:
     async def search_papers(self, query: str | list[float], limit: int = 5) -> list[dict[str, Any]]:
         assert query == "graph rag"
-        assert limit == 1
+        assert limit in {1, 5}
         return [
             {
                 "id": "00000000-0000-0000-0000-000000000001",
@@ -45,7 +46,7 @@ class FakeVectorRepository:
 class FakeGraphRepository:
     async def search_papers(self, query: str, limit: int = 5) -> list[dict]:
         assert query == "graph rag"
-        assert limit == 1
+        assert limit in {1, 5}
         return [{"paper": {"openalex_id": "https://openalex.org/W1", "title": "Graph RAG"}}]
 
     async def get_paper_context(self, openalex_ids: list[str]) -> list[dict]:
@@ -273,3 +274,72 @@ def test_format_agent_event_returns_cli_log_line() -> None:
         )
         == "[agent] search_vector_database query='graph rag' limit=5"
     )
+
+
+@pytest.mark.asyncio
+async def test_research_agent_runs_langgraph_workflow(monkeypatch) -> None:
+    events = []
+    article = OpenAlexArticle(id="https://openalex.org/W1", title="Graph RAG")
+    papers_service = FakePapersService(articles=[article])
+    tools = create_research_tools(
+        papers_service=papers_service,
+        vector_repository=FakeVectorRepository(),
+        graph_repository=FakeGraphRepository(),
+        emit_event=events.append,
+    )
+
+    class FakeChatOpenAI:
+        """Fake chat model used to avoid external LLM calls."""
+
+        def __init__(self, **kwargs: Any) -> None:
+            """Store initialization arguments for assertions.
+
+            Args:
+                **kwargs: Chat model configuration.
+            """
+
+            self.kwargs = kwargs
+
+        async def ainvoke(self, messages: list[Any]) -> Any:
+            """Return a deterministic answer for workflow tests.
+
+            Args:
+                messages: Messages passed to the model.
+
+            Returns:
+                Fake message object with answer content.
+            """
+
+            assert "Reranked retrieved papers JSON" in messages[-1].content
+            assert "Graph context JSON" in messages[-1].content
+            return FakeMessage(content="Graph RAG answer.")
+
+    @dataclass
+    class FakeMessage:
+        """Minimal message object returned by the fake chat model."""
+
+        content: str
+
+    monkeypatch.setattr("app.agents.research.ChatOpenAI", FakeChatOpenAI)
+
+    agent = ResearchAgent(
+        tools=tools,
+        model_name="test-model",
+        api_key="test-key",
+        emit_event=events.append,
+    )
+
+    answer = await agent.run("graph rag")
+
+    assert answer == "Graph RAG answer."
+    assert [event["type"] for event in agent.events] == ["run_start", "run_end"]
+    assert [event["tool"] for event in events if "tool" in event] == [
+        "rewrite_search_query",
+        "rewrite_search_query",
+        "search_vector_database",
+        "search_vector_database",
+        "rerank_documents",
+        "rerank_documents",
+        "get_graph_context",
+        "get_graph_context",
+    ]
