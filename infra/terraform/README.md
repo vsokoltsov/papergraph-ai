@@ -61,6 +61,9 @@ Before running the Helm deployment in CI, install External Secrets Operator in t
 Helm chart creates the `SecretStore` and `ExternalSecret` resources, but the operator and CRDs are a
 cluster prerequisite.
 
+The GitHub Actions deployment service account receives `roles/container.developer` so CI can fetch
+GKE credentials and apply the Helm release after images are pushed.
+
 Then configure kubectl:
 
 The default Cloud SQL settings use the small learning tier:
