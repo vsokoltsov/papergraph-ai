@@ -12,8 +12,7 @@ required_keys=(
   NEO4J_USER
   NEO4J_PASSWORD
   POSTGRES_PASSWORD
-  PAPERGRAPH_API_URL
-  LOGFIRE_TOKEN
+  LOGFIRE_API_KEY
 )
 
 if [[ ! -f "$ENV_FILE" ]]; then
@@ -21,15 +20,56 @@ if [[ ! -f "$ENV_FILE" ]]; then
   exit 1
 fi
 
+read_env_value() {
+  local key="$1"
+
+  awk -F= -v key="$key" '
+    $1 == key {
+      sub(/^[^=]*=/, "")
+      gsub(/^"|"$/, "")
+      gsub(/^'\''|'\''$/, "")
+      print
+    }
+  ' "$ENV_FILE" | tail -n 1
+}
+
+read_tfvars_value() {
+  local key="$1"
+  local tfvars_file="infra/terraform/terraform.tfvars"
+
+  if [[ ! -f "$tfvars_file" ]]; then
+    return
+  fi
+
+  awk -F= -v key="$key" '
+    $1 ~ "^[[:space:]]*" key "[[:space:]]*$" {
+      sub(/^[^=]*=/, "")
+      gsub(/^[[:space:]]+|[[:space:]]+$/, "")
+      gsub(/^"|"$/, "")
+      print
+    }
+  ' "$tfvars_file" | tail -n 1
+}
+
+resolve_value() {
+  local key="$1"
+  local value
+
+  value="$(read_env_value "$key")"
+
+  if [[ -z "$value" && "$key" == "QDRANT_URL" ]]; then
+    value="$(read_env_value "QUADRANT_URL")"
+  fi
+
+  if [[ -z "$value" && "$key" == "POSTGRES_PASSWORD" ]]; then
+    value="$(read_tfvars_value "postgres_password")"
+  fi
+
+  printf "%s" "$value"
+}
+
 for key in "${required_keys[@]}"; do
-  value="$(
-    awk -F= -v key="$key" '
-      $1 == key {
-        sub(/^[^=]*=/, "")
-        print
-      }
-    ' "$ENV_FILE" | tail -n 1
-  )"
+  value="$(resolve_value "$key")"
 
   if [[ -z "$value" ]]; then
     echo "Skipping missing or empty key: $key" >&2
