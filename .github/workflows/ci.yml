@@ -398,6 +398,47 @@ jobs:
       - name: Set up Helm
         uses: azure/setup-helm@v4
 
+      - name: Sync Kubernetes deployment secret
+        run: |
+          set -euo pipefail
+
+          secret_dir="$(mktemp -d)"
+          trap 'rm -rf "$secret_dir"' EXIT
+
+          kubectl create namespace "${{ vars.HELM_NAMESPACE }}" --dry-run=client -o yaml | kubectl apply -f -
+
+          for secret_name in \
+            OPENALEX_API_KEY \
+            OPENAI_API_KEY \
+            QDRANT_URL \
+            NEO4J_URI \
+            NEO4J_USER \
+            NEO4J_PASSWORD \
+            POSTGRES_PASSWORD \
+            PAPERGRAPH_API_URL \
+            LOGFIRE_TOKEN
+          do
+            gcloud secrets versions access latest \
+              --project "${{ vars.SECRET_MANAGER_PROJECT_ID }}" \
+              --secret "$secret_name" > "$secret_dir/$secret_name"
+          done
+
+          cp "$secret_dir/PAPERGRAPH_API_URL" "$secret_dir/API_URL"
+
+          kubectl create secret generic "${{ vars.HELM_RELEASE }}-secrets" \
+            --namespace "${{ vars.HELM_NAMESPACE }}" \
+            --from-file=OPENALEX_API_KEY="$secret_dir/OPENALEX_API_KEY" \
+            --from-file=OPENAI_API_KEY="$secret_dir/OPENAI_API_KEY" \
+            --from-file=QDRANT_URL="$secret_dir/QDRANT_URL" \
+            --from-file=NEO4J_URI="$secret_dir/NEO4J_URI" \
+            --from-file=NEO4J_USER="$secret_dir/NEO4J_USER" \
+            --from-file=NEO4J_PASSWORD="$secret_dir/NEO4J_PASSWORD" \
+            --from-file=POSTGRES_PASSWORD="$secret_dir/POSTGRES_PASSWORD" \
+            --from-file=API_URL="$secret_dir/API_URL" \
+            --from-file=LOGFIRE_TOKEN="$secret_dir/LOGFIRE_TOKEN" \
+            --dry-run=client \
+            -o yaml | kubectl apply -f -
+
       - name: Deploy Helm chart
         run: |
           helm upgrade --install "${{ vars.HELM_RELEASE }}" infra/helm/papergraph \
@@ -409,6 +450,8 @@ jobs:
             --set-string images.ui="${{ vars.ARTIFACT_REGISTRY_URL }}/ui:${{ github.sha }}" \
             --set-string externalSecrets.projectId="${{ vars.SECRET_MANAGER_PROJECT_ID }}" \
             --set-string external.postgresHost="${{ vars.CLOUD_SQL_PRIVATE_IP }}" \
+            --set externalSecrets.enabled=false \
+            --set secrets.create=false \
             --set cloudRunUi.enabled=false
 
       - name: Show deployment diagnostics

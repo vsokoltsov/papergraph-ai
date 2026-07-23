@@ -18,6 +18,10 @@ Production secrets are read from Google Secret Manager:
 - The Cloud Run UI reads `PAPERGRAPH_API_URL` directly from Google Secret Manager through Config
   Connector.
 
+The CI deployment path does not require External Secrets Operator. It reads Google Secret Manager
+values into a temporary runner directory and applies the `papergraph-ai-secrets` Kubernetes Secret
+before Helm runs, with `externalSecrets.enabled=false` and `secrets.create=false`.
+
 Before deploying the production chart, install External Secrets Operator in the GKE cluster as a
 one-time platform bootstrap step. The chart creates a `SecretStore` and `ExternalSecret`, but the
 CRDs and controller must already exist. Do this with an operator/admin identity, not with the

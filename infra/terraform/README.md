@@ -41,9 +41,10 @@ from `.env`:
 make sync-gcp-secrets
 ```
 
-The CI deploy job does not read or template secret values. GKE uses External Secrets Operator to
-sync Google Secret Manager values into Kubernetes, and the Cloud Run UI uses a direct Secret Manager
-reference through Config Connector.
+The CI deploy job reads Google Secret Manager values into temporary runner files and applies the
+`papergraph-ai-secrets` Kubernetes Secret before Helm runs. It does not generate a values file with
+interpolated secrets. If you deploy manually, GKE can also use External Secrets Operator to sync
+Google Secret Manager values into Kubernetes.
 
 The sync script uploads these keys:
 

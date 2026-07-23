@@ -91,7 +91,7 @@ monitoring:
     image: prom/prometheus:v3.8.0
     port: 9090
   pushgateway:
-    image: prom/pushgateway:v1.12.0
+    image: prom/pushgateway:v1.11.3
     port: 9091
   tempo:
     image: grafana/tempo:2.9.0

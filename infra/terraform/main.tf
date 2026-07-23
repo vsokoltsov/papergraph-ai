@@ -86,10 +86,11 @@ module "secret_manager" {
     "LOGFIRE_TOKEN",
   ])
   accessor_service_accounts = toset([
+    module.github_oidc.service_account_email,
     module.workload_identity.service_account_email,
   ])
 
-  depends_on = [module.project_services, module.workload_identity]
+  depends_on = [module.project_services, module.github_oidc, module.workload_identity]
 }
 
 module "github_actions" {
