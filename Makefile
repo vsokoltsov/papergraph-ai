@@ -1,6 +1,6 @@
 PYTHON_TARGETS = app migrations tests
 
-.PHONY: check lint format-check typecheck test dashboards ingest-openalex eval-services eval-retrieval eval-llm generate-llm-ground-truth backend ui mcp terraform-fmt helm-template fix format
+.PHONY: check lint format-check typecheck test dashboards ingest-openalex eval-services eval-retrieval eval-llm generate-llm-ground-truth backend ui mcp terraform-fmt helm-template helm-template-dev sync-gcp-secrets fix format
 
 check: lint format-check typecheck test
 
@@ -51,6 +51,9 @@ helm-template:
 
 helm-template-dev:
 	helm template papergraph-ai infra/helm/papergraph --values infra/helm/papergraph/values-dev.yaml
+
+sync-gcp-secrets:
+	bash infra/scripts/sync-secret-manager-from-env.sh
 
 fix:
 	uv run ruff check $(PYTHON_TARGETS) --fix
