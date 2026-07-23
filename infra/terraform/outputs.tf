@@ -28,6 +28,16 @@ output "gke_cluster_region" {
   value       = module.gke.cluster_region
 }
 
+output "api_load_balancer_ip" {
+  description = "Reserved external IP address for the PaperGraph API load balancer."
+  value       = module.static_ip.api_ip_address
+}
+
+output "papergraph_api_url" {
+  description = "HTTP URL for the PaperGraph API load balancer."
+  value       = module.static_ip.api_url
+}
+
 output "workload_identity_service_account" {
   description = "Google service account used by PaperGraph workloads."
   value       = module.workload_identity.service_account_email

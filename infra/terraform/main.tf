@@ -49,6 +49,15 @@ module "cloud_sql" {
   depends_on = [module.project_services, module.network]
 }
 
+module "static_ip" {
+  source      = "./modules/static_ip"
+  name        = var.name
+  region      = var.region
+  environment = var.environment
+
+  depends_on = [module.project_services]
+}
+
 module "workload_identity" {
   source        = "./modules/workload_identity"
   project_id    = var.project_id
@@ -82,8 +91,7 @@ module "secret_manager" {
     "NEO4J_USER",
     "NEO4J_PASSWORD",
     "POSTGRES_PASSWORD",
-    "PAPERGRAPH_API_URL",
-    "LOGFIRE_TOKEN",
+    "LOGFIRE_API_KEY",
   ])
   accessor_service_accounts = toset([
     module.github_oidc.service_account_email,
@@ -110,9 +118,16 @@ module "github_actions" {
     HELM_NAMESPACE                 = var.name
     GKE_WORKLOAD_SERVICE_ACCOUNT   = module.workload_identity.service_account_email
     CLOUD_SQL_PRIVATE_IP           = module.cloud_sql.private_ip_address
+    API_LOAD_BALANCER_IP           = module.static_ip.api_ip_address
+    PAPERGRAPH_API_URL             = module.static_ip.api_url
     SECRET_MANAGER_PROJECT_ID      = var.project_id
     CLOUD_RUN_UI_SERVICE_NAME      = "${var.name}-ui"
   }
 
-  depends_on = [module.github_oidc, module.artifact_registry, module.secret_manager]
+  depends_on = [
+    module.github_oidc,
+    module.artifact_registry,
+    module.secret_manager,
+    module.static_ip,
+  ]
 }
