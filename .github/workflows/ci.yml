@@ -370,3 +370,41 @@ jobs:
           tags: |
             ${{ vars.ARTIFACT_REGISTRY_URL }}/ui:${{ github.sha }}
             ${{ vars.ARTIFACT_REGISTRY_URL }}/ui:latest
+
+  deploy:
+    name: Deploy
+    runs-on: ubuntu-latest
+    needs:
+      - build-images
+    if: ${{ github.event_name != 'pull_request' }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}
+
+      - name: Get GKE credentials
+        uses: google-github-actions/get-gke-credentials@v2
+        with:
+          cluster_name: ${{ vars.GKE_CLUSTER_NAME }}
+          location: ${{ vars.GKE_CLUSTER_REGION }}
+          project_id: ${{ vars.GCP_PROJECT_ID }}
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+
+      - name: Deploy Helm chart
+        run: |
+          helm upgrade --install "${{ vars.HELM_RELEASE }}" infra/helm/papergraph \
+            --namespace "${{ vars.HELM_NAMESPACE }}" \
+            --create-namespace \
+            --set-string serviceAccount.gcpServiceAccount="${{ vars.GKE_WORKLOAD_SERVICE_ACCOUNT }}" \
+            --set-string images.api="${{ vars.ARTIFACT_REGISTRY_URL }}/api:${{ github.sha }}" \
+            --set-string images.ui="${{ vars.ARTIFACT_REGISTRY_URL }}/ui:${{ github.sha }}" \
+            --set-string externalSecrets.projectId="${{ vars.SECRET_MANAGER_PROJECT_ID }}" \
+            --set-string external.postgresHost="${{ vars.CLOUD_SQL_PRIVATE_IP }}"
