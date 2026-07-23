@@ -18,8 +18,20 @@ Production secrets are read from Google Secret Manager:
 - The Cloud Run UI reads `PAPERGRAPH_API_URL` directly from Google Secret Manager through Config
   Connector.
 
-Before deploying the production chart, install External Secrets Operator in the GKE cluster. The
-chart creates a `SecretStore` and `ExternalSecret`, but the CRDs and controller must already exist.
+Before deploying the production chart, install External Secrets Operator in the GKE cluster as a
+one-time platform bootstrap step. The chart creates a `SecretStore` and `ExternalSecret`, but the
+CRDs and controller must already exist. Do this with an operator/admin identity, not with the
+application deployment service account:
+
+```bash
+helm repo add external-secrets https://charts.external-secrets.io
+helm repo update
+helm upgrade --install external-secrets external-secrets/external-secrets \
+  --namespace external-secrets \
+  --create-namespace \
+  --set installCRDs=true \
+  --wait
+```
 
 Before enabling `cloudRunUi`, install and configure Config Connector in the GKE cluster. If Config
 Connector is not installed, set `cloudRunUi.enabled=false` and deploy the UI with Terraform or

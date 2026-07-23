@@ -57,9 +57,10 @@ The sync script uploads these keys:
 - `PAPERGRAPH_API_URL`
 - `LOGFIRE_TOKEN`
 
-Before running the Helm deployment in CI, install External Secrets Operator in the GKE cluster. The
-Helm chart creates the `SecretStore` and `ExternalSecret` resources, but the operator and CRDs are a
-cluster prerequisite.
+Before running the Helm deployment in CI, install External Secrets Operator in the GKE cluster as a
+one-time platform bootstrap step. The Helm chart creates the `SecretStore` and `ExternalSecret`
+resources, but the operator and CRDs are a cluster prerequisite. Install it with an operator/admin
+identity, because the operator chart manages cluster-scoped RBAC and webhook resources.
 
 The GitHub Actions deployment service account receives `roles/container.developer` so CI can fetch
 GKE credentials and apply the Helm release after images are pushed.
