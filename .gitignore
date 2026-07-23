@@ -25,3 +25,12 @@ eval-results/
 app/eval/llm/generated_dataset.json
 app/eval/llm/ground_truth/ground_truth_dataset.json
 app/eval/llm/ground_truth/generated_dataset.json
+gcp.json
+
+# Terraform local state and plans
+**/.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+.terraform.lock.hcl
+terraform.tfvars
