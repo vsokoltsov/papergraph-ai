@@ -134,6 +134,39 @@ Run checks:
 make check
 ```
 
+## ☁️ GCP Deployment
+
+Deployment assets are split by responsibility:
+
+- `infra/terraform/`: GCP infrastructure modules for GKE Autopilot, Cloud SQL PostgreSQL, Artifact
+  Registry, networking, and Workload Identity.
+- `infra/helm/`: Helm chart for the API, migrations, monitoring stack, Cloud Run UI manifest, and
+  optional dev Qdrant/Neo4j StatefulSets.
+
+Production config uses managed Qdrant Cloud and Neo4j AuraDB endpoints. Use their learning/free
+tiers where possible and pass the endpoint values to Helm. GKE stays smaller because Qdrant and
+Neo4j are not deployed as StatefulSets in the production values.
+
+Create infrastructure:
+
+```bash
+cd infra/terraform
+terraform init
+terraform apply -var-file=terraform.tfvars
+```
+
+Deploy the app and monitoring:
+
+```bash
+helm upgrade --install papergraph-ai infra/helm/papergraph \
+  --namespace papergraph-ai \
+  --create-namespace
+```
+
+Container images are built by GitHub Actions and pushed to Artifact Registry. Terraform creates the
+GitHub Actions variables and GCP Workload Identity Federation needed for the workflow, so no long
+lived GCP JSON key is required.
+
 ## 🔌 API Contracts
 
 Base URL for local development: `http://localhost:8000`.
