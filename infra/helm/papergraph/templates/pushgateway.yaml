@@ -1,0 +1,44 @@
+{{- if .Values.monitoring.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "papergraph.name" . }}-pushgateway
+  labels:
+    {{- include "papergraph.labels" . | nindent 4 }}
+    app.kubernetes.io/component: pushgateway
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "papergraph.name" . }}
+      app.kubernetes.io/component: pushgateway
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ include "papergraph.name" . }}
+        app.kubernetes.io/component: pushgateway
+    spec:
+      containers:
+        - name: pushgateway
+          image: {{ .Values.monitoring.pushgateway.image | quote }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.monitoring.pushgateway.port }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "papergraph.name" . }}-pushgateway
+  labels:
+    {{- include "papergraph.labels" . | nindent 4 }}
+    app.kubernetes.io/component: pushgateway
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: {{ include "papergraph.name" . }}
+    app.kubernetes.io/component: pushgateway
+  ports:
+    - name: http
+      port: {{ .Values.monitoring.pushgateway.port }}
+      targetPort: http
+{{- end }}

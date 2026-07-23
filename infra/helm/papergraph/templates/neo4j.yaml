@@ -1,0 +1,82 @@
+{{- if .Values.neo4j.enabled }}
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "papergraph.name" . }}-neo4j
+  labels:
+    {{- include "papergraph.labels" . | nindent 4 }}
+    app.kubernetes.io/component: neo4j
+spec:
+  serviceName: {{ include "papergraph.name" . }}-neo4j
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "papergraph.name" . }}
+      app.kubernetes.io/component: neo4j
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ include "papergraph.name" . }}
+        app.kubernetes.io/component: neo4j
+    spec:
+      containers:
+        - name: neo4j
+          image: {{ .Values.neo4j.image | quote }}
+          ports:
+            - name: browser
+              containerPort: {{ .Values.neo4j.browserPort }}
+            - name: bolt
+              containerPort: {{ .Values.neo4j.boltPort }}
+          env:
+            - name: NEO4J_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "papergraph.name" . }}-secrets
+                  key: NEO4J_USER
+            - name: NEO4J_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "papergraph.name" . }}-secrets
+                  key: NEO4J_PASSWORD
+            - name: NEO4J_AUTH
+              value: "$(NEO4J_USER)/$(NEO4J_PASSWORD)"
+          volumeMounts:
+            - name: data
+              mountPath: /data
+          readinessProbe:
+            tcpSocket:
+              port: bolt
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          resources:
+            {{- toYaml .Values.neo4j.resources | nindent 12 }}
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: {{ .Values.neo4j.storageSize | quote }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "papergraph.name" . }}-neo4j
+  labels:
+    {{- include "papergraph.labels" . | nindent 4 }}
+    app.kubernetes.io/component: neo4j
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: {{ include "papergraph.name" . }}
+    app.kubernetes.io/component: neo4j
+  ports:
+    - name: browser
+      port: {{ .Values.neo4j.browserPort }}
+      targetPort: browser
+    - name: bolt
+      port: {{ .Values.neo4j.boltPort }}
+      targetPort: bolt
+{{- end }}

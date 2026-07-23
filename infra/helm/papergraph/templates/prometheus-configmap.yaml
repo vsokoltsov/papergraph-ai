@@ -1,0 +1,26 @@
+{{- if .Values.monitoring.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "papergraph.name" . }}-prometheus
+  labels:
+    {{- include "papergraph.labels" . | nindent 4 }}
+data:
+  prometheus.yml: |
+    global:
+      scrape_interval: 15s
+      evaluation_interval: 15s
+
+    scrape_configs:
+      - job_name: papergraph-api
+        metrics_path: /metrics
+        static_configs:
+          - targets:
+              - {{ include "papergraph.name" . }}-api:{{ .Values.api.port }}
+
+      - job_name: pushgateway
+        honor_labels: true
+        static_configs:
+          - targets:
+              - {{ include "papergraph.name" . }}-pushgateway:{{ .Values.monitoring.pushgateway.port }}
+{{- end }}

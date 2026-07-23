@@ -1,0 +1,26 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "papergraph.name" . }}-config
+  labels:
+    {{- include "papergraph.labels" . | nindent 4 }}
+data:
+  LOG_LEVEL: {{ .Values.config.logLevel | quote }}
+  LLM_MODEL: {{ .Values.config.llmModel | quote }}
+  {{- if .Values.qdrant.enabled }}
+  QDRANT_URL: {{ printf "http://%s-qdrant:%v" (include "papergraph.name" .) .Values.qdrant.port | quote }}
+  {{- else }}
+  QDRANT_URL: {{ .Values.external.qdrantUrl | quote }}
+  {{- end }}
+  QDRANT_COLLECTION_NAME: {{ .Values.config.qdrantCollectionName | quote }}
+  QDRANT_VECTOR_SIZE: {{ .Values.config.qdrantVectorSize | quote }}
+  {{- if .Values.neo4j.enabled }}
+  NEO4J_URI: {{ printf "bolt://%s-neo4j:%v" (include "papergraph.name" .) .Values.neo4j.boltPort | quote }}
+  {{- else }}
+  NEO4J_URI: {{ .Values.external.neo4jUri | quote }}
+  {{- end }}
+  API_URL: {{ .Values.external.apiUrl | quote }}
+  PROMETHEUS_PUSHGATEWAY_URL: {{ printf "http://%s-pushgateway:%v" (include "papergraph.name" .) .Values.monitoring.pushgateway.port | quote }}
+  OTEL_SERVICE_NAME: {{ .Values.config.otelServiceName | quote }}
+  OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: {{ printf "http://%s-tempo:%v/v1/traces" (include "papergraph.name" .) .Values.monitoring.tempo.otlpHttpPort | quote }}
+  LOGFIRE_ENABLED: "true"

@@ -1,0 +1,29 @@
+{{- if .Values.cloudRunUi.enabled }}
+apiVersion: run.cnrm.cloud.google.com/v1beta1
+kind: RunService
+metadata:
+  name: {{ .Values.cloudRunUi.serviceName }}
+  labels:
+    {{- include "papergraph.labels" . | nindent 4 }}
+spec:
+  location: {{ .Values.cloudRunUi.location }}
+  template:
+    spec:
+      serviceAccountName: {{ .Values.serviceAccount.gcpServiceAccount | quote }}
+      containers:
+        - image: {{ .Values.images.ui | quote }}
+          ports:
+            - containerPort: 8501
+          env:
+            - name: API_URL
+              {{- if .Values.externalSecrets.enabled }}
+              valueSource:
+                secretKeyRef:
+                  secretRef:
+                    external: {{ printf "projects/%s/secrets/PAPERGRAPH_API_URL" .Values.externalSecrets.projectId | quote }}
+                  versionRef:
+                    external: latest
+              {{- else }}
+              value: {{ .Values.external.apiUrl | quote }}
+              {{- end }}
+{{- end }}

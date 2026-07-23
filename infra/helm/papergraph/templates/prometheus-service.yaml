@@ -1,0 +1,18 @@
+{{- if .Values.monitoring.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "papergraph.name" . }}-prometheus
+  labels:
+    {{- include "papergraph.labels" . | nindent 4 }}
+    app.kubernetes.io/component: prometheus
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: {{ include "papergraph.name" . }}
+    app.kubernetes.io/component: prometheus
+  ports:
+    - name: http
+      port: {{ .Values.monitoring.prometheus.port }}
+      targetPort: http
+{{- end }}

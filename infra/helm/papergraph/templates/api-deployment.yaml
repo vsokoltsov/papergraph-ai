@@ -1,0 +1,56 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "papergraph.name" . }}-api
+  labels:
+    {{- include "papergraph.labels" . | nindent 4 }}
+    app.kubernetes.io/component: api
+spec:
+  replicas: {{ .Values.api.replicas }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "papergraph.name" . }}
+      app.kubernetes.io/component: api
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ include "papergraph.name" . }}
+        app.kubernetes.io/component: api
+    spec:
+      serviceAccountName: {{ .Values.serviceAccount.name }}
+      containers:
+        - name: api
+          image: {{ .Values.images.api | quote }}
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: {{ .Values.api.port }}
+          envFrom:
+            - configMapRef:
+                name: {{ include "papergraph.name" . }}-config
+            - secretRef:
+                name: {{ include "papergraph.name" . }}-secrets
+          env:
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "papergraph.name" . }}-secrets
+                  key: POSTGRES_PASSWORD
+            - name: POSTGRES_DATABASE_URL
+              value: {{ printf "postgresql+asyncpg://%s:$(POSTGRES_PASSWORD)@%s:5432/%s" .Values.external.postgresUser .Values.external.postgresHost .Values.external.postgresDatabase | quote }}
+            - name: POSTGRES_SYNC_DATABASE_URL
+              value: {{ printf "postgresql+psycopg://%s:$(POSTGRES_PASSWORD)@%s:5432/%s" .Values.external.postgresUser .Values.external.postgresHost .Values.external.postgresDatabase | quote }}
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 20
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          resources:
+            {{- toYaml .Values.api.resources | nindent 12 }}

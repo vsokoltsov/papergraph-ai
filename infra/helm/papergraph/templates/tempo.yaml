@@ -1,0 +1,85 @@
+{{- if .Values.monitoring.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "papergraph.name" . }}-tempo
+  labels:
+    {{- include "papergraph.labels" . | nindent 4 }}
+    app.kubernetes.io/component: tempo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "papergraph.name" . }}
+      app.kubernetes.io/component: tempo
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ include "papergraph.name" . }}
+        app.kubernetes.io/component: tempo
+    spec:
+      containers:
+        - name: tempo
+          image: {{ .Values.monitoring.tempo.image | quote }}
+          args:
+            - -config.file=/etc/tempo.yml
+          ports:
+            - name: http
+              containerPort: {{ .Values.monitoring.tempo.port }}
+            - name: otlp-http
+              containerPort: {{ .Values.monitoring.tempo.otlpHttpPort }}
+          volumeMounts:
+            - name: config
+              mountPath: /etc/tempo.yml
+              subPath: tempo.yml
+      volumes:
+        - name: config
+          configMap:
+            name: {{ include "papergraph.name" . }}-tempo
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "papergraph.name" . }}-tempo
+  labels:
+    {{- include "papergraph.labels" . | nindent 4 }}
+data:
+  tempo.yml: |
+    server:
+      http_listen_port: {{ .Values.monitoring.tempo.port }}
+
+    distributor:
+      receivers:
+        otlp:
+          protocols:
+            http:
+              endpoint: 0.0.0.0:{{ .Values.monitoring.tempo.otlpHttpPort }}
+
+    storage:
+      trace:
+        backend: local
+        local:
+          path: /tmp/tempo/traces
+        wal:
+          path: /tmp/tempo/wal
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "papergraph.name" . }}-tempo
+  labels:
+    {{- include "papergraph.labels" . | nindent 4 }}
+    app.kubernetes.io/component: tempo
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: {{ include "papergraph.name" . }}
+    app.kubernetes.io/component: tempo
+  ports:
+    - name: http
+      port: {{ .Values.monitoring.tempo.port }}
+      targetPort: http
+    - name: otlp-http
+      port: {{ .Values.monitoring.tempo.otlpHttpPort }}
+      targetPort: otlp-http
+{{- end }}

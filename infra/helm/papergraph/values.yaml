@@ -1,0 +1,103 @@
+nameOverride: papergraph-ai
+
+namespace: papergraph-ai
+
+serviceAccount:
+  create: true
+  name: papergraph-ai
+  gcpServiceAccount: papergraph-ai@PROJECT_ID.iam.gserviceaccount.com
+
+images:
+  api: europe-west1-docker.pkg.dev/PROJECT_ID/papergraph-ai-prod/api:latest
+  ui: europe-west1-docker.pkg.dev/PROJECT_ID/papergraph-ai-prod/ui:latest
+
+api:
+  replicas: 1
+  port: 8000
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+cloudRunUi:
+  enabled: true
+  location: europe-west1
+  serviceName: papergraph-ai-ui
+
+config:
+  logLevel: INFO
+  llmModel: gpt-4o-mini
+  qdrantCollectionName: papers
+  qdrantVectorSize: "384"
+  otelServiceName: papergraph-ai
+
+external:
+  apiUrl: https://api.example.com
+  qdrantUrl: https://qdrant-free-tier.example.com
+  neo4jUri: neo4j+s://neo4j-free-tier.example.com
+  postgresHost: 127.0.0.1
+  postgresDatabase: papergraph
+  postgresUser: papergraph
+
+externalSecrets:
+  enabled: true
+  projectId: PROJECT_ID
+  refreshInterval: 1h
+  secretStoreName: papergraph-ai-gcp-secrets
+
+secrets:
+  create: true
+  openalexApiKey: ""
+  openaiApiKey: ""
+  neo4jUser: neo4j
+  neo4jPassword: ""
+  postgresPassword: ""
+  logfireToken: ""
+
+qdrant:
+  enabled: false
+  image: qdrant/qdrant:v1.16.1
+  port: 6333
+  grpcPort: 6334
+  storageSize: 20Gi
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      cpu: 1000m
+      memory: 2Gi
+
+neo4j:
+  enabled: false
+  image: neo4j:5-community
+  browserPort: 7474
+  boltPort: 7687
+  storageSize: 20Gi
+  resources:
+    requests:
+      cpu: 500m
+      memory: 1Gi
+    limits:
+      cpu: 2000m
+      memory: 4Gi
+
+monitoring:
+  enabled: true
+  prometheus:
+    image: prom/prometheus:v3.8.0
+    port: 9090
+  pushgateway:
+    image: prom/pushgateway:v1.12.0
+    port: 9091
+  tempo:
+    image: grafana/tempo:2.9.0
+    port: 3200
+    otlpHttpPort: 4318
+  grafana:
+    image: grafana/grafana-oss:11.6.0
+    port: 3000
+    anonymousAdmin: true

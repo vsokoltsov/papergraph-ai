@@ -1,0 +1,80 @@
+{{- if .Values.monitoring.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "papergraph.name" . }}-grafana
+  labels:
+    {{- include "papergraph.labels" . | nindent 4 }}
+    app.kubernetes.io/component: grafana
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "papergraph.name" . }}
+      app.kubernetes.io/component: grafana
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ include "papergraph.name" . }}
+        app.kubernetes.io/component: grafana
+    spec:
+      containers:
+        - name: grafana
+          image: {{ .Values.monitoring.grafana.image | quote }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.monitoring.grafana.port }}
+          env:
+            - name: GF_AUTH_ANONYMOUS_ENABLED
+              value: {{ ternary "true" "false" .Values.monitoring.grafana.anonymousAdmin | quote }}
+            - name: GF_AUTH_ANONYMOUS_ORG_ROLE
+              value: Admin
+            - name: GF_AUTH_DISABLE_LOGIN_FORM
+              value: {{ ternary "true" "false" .Values.monitoring.grafana.anonymousAdmin | quote }}
+          volumeMounts:
+            - name: datasources
+              mountPath: /etc/grafana/provisioning/datasources
+      volumes:
+        - name: datasources
+          configMap:
+            name: {{ include "papergraph.name" . }}-grafana-datasources
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "papergraph.name" . }}-grafana-datasources
+  labels:
+    {{- include "papergraph.labels" . | nindent 4 }}
+data:
+  datasources.yml: |
+    apiVersion: 1
+    datasources:
+      - name: Prometheus
+        type: prometheus
+        uid: Prometheus
+        access: proxy
+        url: http://{{ include "papergraph.name" . }}-prometheus:{{ .Values.monitoring.prometheus.port }}
+        isDefault: true
+      - name: Tempo
+        type: tempo
+        uid: Tempo
+        access: proxy
+        url: http://{{ include "papergraph.name" . }}-tempo:{{ .Values.monitoring.tempo.port }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "papergraph.name" . }}-grafana
+  labels:
+    {{- include "papergraph.labels" . | nindent 4 }}
+    app.kubernetes.io/component: grafana
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: {{ include "papergraph.name" . }}
+    app.kubernetes.io/component: grafana
+  ports:
+    - name: http
+      port: {{ .Values.monitoring.grafana.port }}
+      targetPort: http
+{{- end }}

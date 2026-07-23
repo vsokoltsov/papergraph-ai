@@ -1,0 +1,45 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "papergraph.name" . }}-migrate
+  labels:
+    {{- include "papergraph.labels" . | nindent 4 }}
+    app.kubernetes.io/component: migration
+  annotations:
+    helm.sh/hook: pre-install,pre-upgrade
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+spec:
+  backoffLimit: 3
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ include "papergraph.name" . }}
+        app.kubernetes.io/component: migration
+    spec:
+      restartPolicy: OnFailure
+      serviceAccountName: {{ .Values.serviceAccount.name }}
+      containers:
+        - name: migrate
+          image: {{ .Values.images.api | quote }}
+          imagePullPolicy: IfNotPresent
+          command:
+            - uv
+            - run
+            - alembic
+            - upgrade
+            - feedback@head
+          envFrom:
+            - configMapRef:
+                name: {{ include "papergraph.name" . }}-config
+            - secretRef:
+                name: {{ include "papergraph.name" . }}-secrets
+          env:
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "papergraph.name" . }}-secrets
+                  key: POSTGRES_PASSWORD
+            - name: POSTGRES_DATABASE_URL
+              value: {{ printf "postgresql+asyncpg://%s:$(POSTGRES_PASSWORD)@%s:5432/%s" .Values.external.postgresUser .Values.external.postgresHost .Values.external.postgresDatabase | quote }}
+            - name: POSTGRES_SYNC_DATABASE_URL
+              value: {{ printf "postgresql+psycopg://%s:$(POSTGRES_PASSWORD)@%s:5432/%s" .Values.external.postgresUser .Values.external.postgresHost .Values.external.postgresDatabase | quote }}
