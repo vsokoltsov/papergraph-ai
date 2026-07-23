@@ -34,3 +34,4 @@ gcp.json
 *.tfplan
 .terraform.lock.hcl
 terraform.tfvars
+.DS_Store
