@@ -1,6 +1,6 @@
 PYTHON_TARGETS = app migrations tests
 
-.PHONY: check lint format-check typecheck test dashboards ingest-openalex eval-services eval-retrieval eval-llm generate-llm-ground-truth backend ui mcp fix format
+.PHONY: check lint format-check typecheck test dashboards ingest-openalex eval-services eval-retrieval eval-llm generate-llm-ground-truth backend ui mcp terraform-fmt helm-template fix format
 
 check: lint format-check typecheck test
 
@@ -42,6 +42,15 @@ ui:
 
 mcp:
 	uv run python -m app.mcp
+
+terraform-fmt:
+	terraform -chdir=infra/terraform fmt -recursive
+
+helm-template:
+	helm template papergraph-ai infra/helm/papergraph
+
+helm-template-dev:
+	helm template papergraph-ai infra/helm/papergraph --values infra/helm/papergraph/values-dev.yaml
 
 fix:
 	uv run ruff check $(PYTHON_TARGETS) --fix
