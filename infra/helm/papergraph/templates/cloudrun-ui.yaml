@@ -16,14 +16,5 @@ spec:
             - containerPort: 8501
           env:
             - name: API_URL
-              {{- if .Values.externalSecrets.enabled }}
-              valueSource:
-                secretKeyRef:
-                  secretRef:
-                    external: {{ printf "projects/%s/secrets/PAPERGRAPH_API_URL" .Values.externalSecrets.projectId | quote }}
-                  versionRef:
-                    external: latest
-              {{- else }}
               value: {{ .Values.external.apiUrl | quote }}
-              {{- end }}
 {{- end }}

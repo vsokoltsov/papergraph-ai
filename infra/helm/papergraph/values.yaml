@@ -14,6 +14,8 @@ images:
 api:
   replicas: 1
   port: 8000
+  serviceType: ClusterIP
+  loadBalancerIP: ""
   resources:
     requests:
       cpu: 100m
@@ -55,7 +57,7 @@ secrets:
   neo4jUser: neo4j
   neo4jPassword: ""
   postgresPassword: ""
-  logfireToken: ""
+  logfireApiKey: ""
 
 qdrant:
   enabled: false

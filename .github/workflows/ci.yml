@@ -415,15 +415,12 @@ jobs:
             NEO4J_USER \
             NEO4J_PASSWORD \
             POSTGRES_PASSWORD \
-            PAPERGRAPH_API_URL \
-            LOGFIRE_TOKEN
+            LOGFIRE_API_KEY
           do
             gcloud secrets versions access latest \
               --project "${{ vars.SECRET_MANAGER_PROJECT_ID }}" \
               --secret "$secret_name" > "$secret_dir/$secret_name"
           done
-
-          cp "$secret_dir/PAPERGRAPH_API_URL" "$secret_dir/API_URL"
 
           kubectl create secret generic "${{ vars.HELM_RELEASE }}-secrets" \
             --namespace "${{ vars.HELM_NAMESPACE }}" \
@@ -434,8 +431,7 @@ jobs:
             --from-file=NEO4J_USER="$secret_dir/NEO4J_USER" \
             --from-file=NEO4J_PASSWORD="$secret_dir/NEO4J_PASSWORD" \
             --from-file=POSTGRES_PASSWORD="$secret_dir/POSTGRES_PASSWORD" \
-            --from-file=API_URL="$secret_dir/API_URL" \
-            --from-file=LOGFIRE_TOKEN="$secret_dir/LOGFIRE_TOKEN" \
+            --from-file=LOGFIRE_API_KEY="$secret_dir/LOGFIRE_API_KEY" \
             --dry-run=client \
             -o yaml | kubectl apply -f -
 
@@ -450,6 +446,9 @@ jobs:
             --set-string images.ui="${{ vars.ARTIFACT_REGISTRY_URL }}/ui:${{ github.sha }}" \
             --set-string externalSecrets.projectId="${{ vars.SECRET_MANAGER_PROJECT_ID }}" \
             --set-string external.postgresHost="${{ vars.CLOUD_SQL_PRIVATE_IP }}" \
+            --set-string external.apiUrl="${{ vars.PAPERGRAPH_API_URL }}" \
+            --set api.serviceType=LoadBalancer \
+            --set-string api.loadBalancerIP="${{ vars.API_LOAD_BALANCER_IP }}" \
             --set externalSecrets.enabled=false \
             --set secrets.create=false \
             --set cloudRunUi.enabled=false
@@ -469,6 +468,6 @@ jobs:
             --region "${{ vars.GCP_REGION }}" \
             --service-account "${{ vars.GKE_WORKLOAD_SERVICE_ACCOUNT }}" \
             --port 8501 \
-            --set-secrets API_URL=PAPERGRAPH_API_URL:latest \
+            --set-env-vars API_URL="${{ vars.PAPERGRAPH_API_URL }}" \
             --allow-unauthenticated \
             --quiet
