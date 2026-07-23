@@ -71,6 +71,27 @@ module "github_oidc" {
   depends_on = [module.project_services]
 }
 
+module "secret_manager" {
+  source     = "./modules/secret_manager"
+  project_id = var.project_id
+  secret_ids = toset([
+    "OPENALEX_API_KEY",
+    "OPENAI_API_KEY",
+    "QDRANT_URL",
+    "NEO4J_URI",
+    "NEO4J_USER",
+    "NEO4J_PASSWORD",
+    "POSTGRES_PASSWORD",
+    "PAPERGRAPH_API_URL",
+    "LOGFIRE_TOKEN",
+  ])
+  accessor_service_accounts = toset([
+    module.workload_identity.service_account_email,
+  ])
+
+  depends_on = [module.project_services, module.workload_identity]
+}
+
 module "github_actions" {
   source     = "./modules/github_actions"
   repository = var.github_repository
@@ -82,7 +103,14 @@ module "github_actions" {
     ARTIFACT_REGISTRY_URL          = module.artifact_registry.repository_url
     GCP_WORKLOAD_IDENTITY_PROVIDER = module.github_oidc.provider_name
     GCP_SERVICE_ACCOUNT            = module.github_oidc.service_account_email
+    GKE_CLUSTER_NAME               = module.gke.cluster_name
+    GKE_CLUSTER_REGION             = module.gke.cluster_region
+    HELM_RELEASE                   = var.name
+    HELM_NAMESPACE                 = var.name
+    GKE_WORKLOAD_SERVICE_ACCOUNT   = module.workload_identity.service_account_email
+    CLOUD_SQL_PRIVATE_IP           = module.cloud_sql.private_ip_address
+    SECRET_MANAGER_PROJECT_ID      = var.project_id
   }
 
-  depends_on = [module.github_oidc, module.artifact_registry]
+  depends_on = [module.github_oidc, module.artifact_registry, module.secret_manager]
 }

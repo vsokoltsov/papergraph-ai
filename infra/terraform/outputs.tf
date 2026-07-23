@@ -13,6 +13,11 @@ output "cloud_sql_connection_name" {
   value       = module.cloud_sql.connection_name
 }
 
+output "cloud_sql_private_ip_address" {
+  description = "Cloud SQL private IP address."
+  value       = module.cloud_sql.private_ip_address
+}
+
 output "gke_cluster_name" {
   description = "GKE cluster name."
   value       = module.gke.cluster_name
@@ -36,4 +41,9 @@ output "github_actions_service_account" {
 output "github_actions_workload_identity_provider" {
   description = "Workload Identity Provider name for GitHub Actions."
   value       = module.github_oidc.provider_name
+}
+
+output "secret_manager_secret_ids" {
+  description = "Secret Manager secret IDs managed by Terraform."
+  value       = module.secret_manager.secret_ids
 }

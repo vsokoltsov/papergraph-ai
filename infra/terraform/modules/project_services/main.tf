@@ -7,6 +7,7 @@ locals {
     "iam.googleapis.com",
     "iamcredentials.googleapis.com",
     "run.googleapis.com",
+    "secretmanager.googleapis.com",
     "servicenetworking.googleapis.com",
     "sqladmin.googleapis.com",
     "sts.googleapis.com",

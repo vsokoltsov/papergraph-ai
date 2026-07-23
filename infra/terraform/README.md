@@ -29,7 +29,37 @@ planning/applying:
 export GITHUB_TOKEN=...
 ```
 
-The token needs permission to manage repository Actions variables.
+The token needs repository access to `vsokoltsov/papergraph-ai` and repository **Variables**
+read/write permission. Terraform reads existing variables during `plan` and creates/updates them
+during `apply`.
+
+Terraform manages only non-secret GitHub Actions variables. Application secrets are stored in
+Google Secret Manager. After Terraform creates the secret containers and IAM bindings, sync values
+from `.env`:
+
+```bash
+make sync-gcp-secrets
+```
+
+The CI deploy job does not read or template secret values. GKE uses External Secrets Operator to
+sync Google Secret Manager values into Kubernetes, and the Cloud Run UI uses a direct Secret Manager
+reference through Config Connector.
+
+The sync script uploads these keys:
+
+- `OPENALEX_API_KEY`
+- `OPENAI_API_KEY`
+- `QDRANT_URL`
+- `NEO4J_URI`
+- `NEO4J_USER`
+- `NEO4J_PASSWORD`
+- `POSTGRES_PASSWORD`
+- `PAPERGRAPH_API_URL`
+- `LOGFIRE_TOKEN`
+
+Before running the Helm deployment in CI, install External Secrets Operator in the GKE cluster. The
+Helm chart creates the `SecretStore` and `ExternalSecret` resources, but the operator and CRDs are a
+cluster prerequisite.
 
 Then configure kubectl:
 
