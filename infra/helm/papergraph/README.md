@@ -5,7 +5,7 @@ This chart deploys:
 - FastAPI backend to GKE.
 - Alembic feedback migration as a Helm hook Job.
 - Prometheus, Pushgateway, Tempo, and Grafana to GKE.
-- Streamlit UI as a Cloud Run service through Config Connector.
+- Streamlit UI as an optional Cloud Run service through Config Connector.
 
 Production defaults use managed Qdrant Cloud and Neo4j AuraDB endpoints. Use the learning/free tier
 for each service when possible, then pass those endpoint values to Helm. In-cluster Qdrant and Neo4j
@@ -35,7 +35,8 @@ helm upgrade --install external-secrets external-secrets/external-secrets \
 
 Before enabling `cloudRunUi`, install and configure Config Connector in the GKE cluster. If Config
 Connector is not installed, set `cloudRunUi.enabled=false` and deploy the UI with Terraform or
-`gcloud run deploy`.
+`gcloud run deploy`. The CI pipeline uses this second approach: Helm deploys the GKE resources with
+`cloudRunUi.enabled=false`, then `gcloud run deploy` updates the Cloud Run UI service.
 
 ```bash
 helm upgrade --install papergraph-ai infra/helm/papergraph \

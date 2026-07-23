@@ -63,7 +63,9 @@ resources, but the operator and CRDs are a cluster prerequisite. Install it with
 identity, because the operator chart manages cluster-scoped RBAC and webhook resources.
 
 The GitHub Actions deployment service account receives `roles/container.developer` so CI can fetch
-GKE credentials and apply the Helm release after images are pushed.
+GKE credentials and apply the Helm release after images are pushed. It also receives
+`roles/run.admin` and `roles/iam.serviceAccountUser` so CI can deploy the Streamlit UI image to
+Cloud Run using the application runtime service account.
 
 Then configure kubectl:
 

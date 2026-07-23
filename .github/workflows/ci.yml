@@ -407,4 +407,16 @@ jobs:
             --set-string images.api="${{ vars.ARTIFACT_REGISTRY_URL }}/api:${{ github.sha }}" \
             --set-string images.ui="${{ vars.ARTIFACT_REGISTRY_URL }}/ui:${{ github.sha }}" \
             --set-string externalSecrets.projectId="${{ vars.SECRET_MANAGER_PROJECT_ID }}" \
-            --set-string external.postgresHost="${{ vars.CLOUD_SQL_PRIVATE_IP }}"
+            --set-string external.postgresHost="${{ vars.CLOUD_SQL_PRIVATE_IP }}" \
+            --set cloudRunUi.enabled=false
+
+      - name: Deploy Cloud Run UI
+        run: |
+          gcloud run deploy "${{ vars.CLOUD_RUN_UI_SERVICE_NAME }}" \
+            --image "${{ vars.ARTIFACT_REGISTRY_URL }}/ui:${{ github.sha }}" \
+            --region "${{ vars.GCP_REGION }}" \
+            --service-account "${{ vars.GKE_WORKLOAD_SERVICE_ACCOUNT }}" \
+            --port 8501 \
+            --set-secrets API_URL=PAPERGRAPH_API_URL:latest \
+            --allow-unauthenticated \
+            --quiet

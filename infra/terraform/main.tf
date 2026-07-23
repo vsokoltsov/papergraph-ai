@@ -110,6 +110,7 @@ module "github_actions" {
     GKE_WORKLOAD_SERVICE_ACCOUNT   = module.workload_identity.service_account_email
     CLOUD_SQL_PRIVATE_IP           = module.cloud_sql.private_ip_address
     SECRET_MANAGER_PROJECT_ID      = var.project_id
+    CLOUD_RUN_UI_SERVICE_NAME      = "${var.name}-ui"
   }
 
   depends_on = [module.github_oidc, module.artifact_registry, module.secret_manager]
