@@ -5,6 +5,7 @@ This Terraform stack creates the GCP infrastructure needed to run PaperGraph AI:
 - GKE Autopilot cluster for the API, migrations, MCP server, and monitoring.
 - Cloud SQL PostgreSQL for feedback and agent run storage.
 - Artifact Registry repository for container images.
+- Regional static IP address for the public API load balancer.
 - Google service account and IAM bindings for Workload Identity.
 - GitHub Actions OIDC access to push images to Artifact Registry.
 - GitHub Actions repository variables for image builds.
@@ -55,8 +56,12 @@ The sync script uploads these keys:
 - `NEO4J_USER`
 - `NEO4J_PASSWORD`
 - `POSTGRES_PASSWORD`
+- `LOGFIRE_API_KEY`
+
+Terraform also writes these derived deployment values into GitHub Actions variables:
+
+- `API_LOAD_BALANCER_IP`
 - `PAPERGRAPH_API_URL`
-- `LOGFIRE_TOKEN`
 
 Before running the Helm deployment in CI, install External Secrets Operator in the GKE cluster as a
 one-time platform bootstrap step. The Helm chart creates the `SecretStore` and `ExternalSecret`

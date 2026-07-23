@@ -15,8 +15,8 @@ Production secrets are read from Google Secret Manager:
 
 - GKE workloads use External Secrets Operator to sync Google Secret Manager values into the
   `papergraph-ai-secrets` Kubernetes Secret.
-- The Cloud Run UI reads `PAPERGRAPH_API_URL` directly from Google Secret Manager through Config
-  Connector.
+- Terraform reserves a static API load balancer IP and stores the derived API URL in the
+  `PAPERGRAPH_API_URL` GitHub Actions variable. CI passes that value to Cloud Run as `API_URL`.
 
 The CI deployment path does not require External Secrets Operator. It reads Google Secret Manager
 values into a temporary runner directory and applies the `papergraph-ai-secrets` Kubernetes Secret
@@ -50,7 +50,10 @@ helm upgrade --install papergraph-ai infra/helm/papergraph \
   --set images.api=europe-west1-docker.pkg.dev/PROJECT_ID/papergraph-ai-prod/api:latest \
   --set images.ui=europe-west1-docker.pkg.dev/PROJECT_ID/papergraph-ai-prod/ui:latest \
   --set externalSecrets.projectId=PROJECT_ID \
-  --set external.postgresHost=CLOUD_SQL_PRIVATE_IP
+  --set external.postgresHost=CLOUD_SQL_PRIVATE_IP \
+  --set api.serviceType=LoadBalancer \
+  --set api.loadBalancerIP=API_LOAD_BALANCER_IP \
+  --set external.apiUrl=http://API_LOAD_BALANCER_IP:8000
 ```
 
 For a self-contained development/staging deployment, use in-cluster Qdrant and Neo4j:

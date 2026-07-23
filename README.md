@@ -322,11 +322,11 @@ External observability can also be sent to Pydantic Logfire. Set the Logfire wri
 
 ```bash
 LOGFIRE_ENABLED=true
-LOGFIRE_TOKEN=your-logfire-write-token
+LOGFIRE_API_KEY=your-logfire-write-token
 ```
 
-`LOGFIRE_TOKEN` is the official Logfire environment variable. The app also accepts
-`LOGFIRE_API_KEY` for compatibility with older local `.env` files.
+`LOGFIRE_API_KEY` is used by the local and deployment configuration. The app also accepts
+`LOGFIRE_TOKEN`.
 
 When enabled, the app configures Logfire once in `app/tracing.py`, instruments FastAPI requests,
 HTTPX calls, OpenAI SDK calls, and failed Pydantic validations, and forwards existing OpenTelemetry
