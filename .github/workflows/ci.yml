@@ -403,12 +403,21 @@ jobs:
           helm upgrade --install "${{ vars.HELM_RELEASE }}" infra/helm/papergraph \
             --namespace "${{ vars.HELM_NAMESPACE }}" \
             --create-namespace \
+            --timeout 10m \
             --set-string serviceAccount.gcpServiceAccount="${{ vars.GKE_WORKLOAD_SERVICE_ACCOUNT }}" \
             --set-string images.api="${{ vars.ARTIFACT_REGISTRY_URL }}/api:${{ github.sha }}" \
             --set-string images.ui="${{ vars.ARTIFACT_REGISTRY_URL }}/ui:${{ github.sha }}" \
             --set-string externalSecrets.projectId="${{ vars.SECRET_MANAGER_PROJECT_ID }}" \
             --set-string external.postgresHost="${{ vars.CLOUD_SQL_PRIVATE_IP }}" \
             --set cloudRunUi.enabled=false
+
+      - name: Show deployment diagnostics
+        if: failure()
+        run: |
+          kubectl get all,secrets,externalsecrets,secretstores -n "${{ vars.HELM_NAMESPACE }}" || true
+          kubectl describe job "${{ vars.HELM_RELEASE }}-migrate" -n "${{ vars.HELM_NAMESPACE }}" || true
+          kubectl logs job/"${{ vars.HELM_RELEASE }}-migrate" -n "${{ vars.HELM_NAMESPACE }}" --all-containers --tail=200 || true
+          kubectl get events -n "${{ vars.HELM_NAMESPACE }}" --sort-by=.lastTimestamp || true
 
       - name: Deploy Cloud Run UI
         run: |

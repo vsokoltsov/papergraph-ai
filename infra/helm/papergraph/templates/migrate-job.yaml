@@ -6,7 +6,7 @@ metadata:
     {{- include "papergraph.labels" . | nindent 4 }}
     app.kubernetes.io/component: migration
   annotations:
-    helm.sh/hook: pre-install,pre-upgrade
+    helm.sh/hook: post-install,post-upgrade
     helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
 spec:
   backoffLimit: 3
