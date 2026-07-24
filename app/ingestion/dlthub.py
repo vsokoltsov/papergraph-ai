@@ -13,7 +13,7 @@ from app.settings import Settings, get_settings
 
 @run.job(
     name="ingest_openalex_from_dlthub",
-    execute={"timeout": "30m"},
+    execute={"timeout": {"timeout": 1800}},
     expose={
         "display_name": "Ingest OpenAlex papers",
         "tags": ["papergraph", "openalex", "ingestion"],
