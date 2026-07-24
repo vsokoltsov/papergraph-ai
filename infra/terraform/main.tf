@@ -134,7 +134,9 @@ module "github_actions" {
     OTEL_EXPORTER_OTLP_TRACES_ENDPOINT = "http://${var.name}-tempo:4318/v1/traces"
     LOGFIRE_ENABLED                    = tostring(var.logfire_enabled)
     API_LOAD_BALANCER_IP               = module.static_ip.api_ip_address
+    GRAFANA_LOAD_BALANCER_IP           = module.static_ip.grafana_ip_address
     PAPERGRAPH_API_URL                 = module.static_ip.api_url
+    PAPERGRAPH_GRAFANA_URL             = module.static_ip.grafana_url
     SECRET_MANAGER_PROJECT_ID          = var.project_id
     CLOUD_RUN_UI_SERVICE_NAME          = "${var.name}-ui"
   }

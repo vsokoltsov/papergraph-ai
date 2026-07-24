@@ -63,7 +63,9 @@ Terraform writes these Secret Manager values directly from sensitive Terraform v
 Terraform also writes these derived deployment values into GitHub Actions variables:
 
 - `API_LOAD_BALANCER_IP`
+- `GRAFANA_LOAD_BALANCER_IP`
 - `PAPERGRAPH_API_URL`
+- `PAPERGRAPH_GRAFANA_URL`
 - `QDRANT_URL`
 - `NEO4J_URI`
 - `POSTGRES_DATABASE`
@@ -77,6 +79,9 @@ Terraform also writes these derived deployment values into GitHub Actions variab
 `PAPERGRAPH_API_URL` is derived from the reserved static IP and is used by CI to configure the
 Cloud Run UI `API_URL` environment variable. Do not put this value in `.env`; before Terraform
 applies, the production URL is not known.
+
+`PAPERGRAPH_GRAFANA_URL` is derived from the reserved Grafana static IP. CI uses
+`GRAFANA_LOAD_BALANCER_IP` to expose Grafana through a Kubernetes `LoadBalancer` service.
 
 `QDRANT_URL` and `NEO4J_URI` are derived from the Helm-managed Kubernetes services:
 

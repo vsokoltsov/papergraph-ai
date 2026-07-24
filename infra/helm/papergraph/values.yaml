@@ -106,3 +106,5 @@ monitoring:
     image: grafana/grafana-oss:11.6.0
     port: 3000
     anonymousAdmin: true
+    serviceType: ClusterIP
+    loadBalancerIP: ""

@@ -69,7 +69,10 @@ metadata:
     {{- include "papergraph.labels" . | nindent 4 }}
     app.kubernetes.io/component: grafana
 spec:
-  type: ClusterIP
+  type: {{ .Values.monitoring.grafana.serviceType }}
+  {{- if .Values.monitoring.grafana.loadBalancerIP }}
+  loadBalancerIP: {{ .Values.monitoring.grafana.loadBalancerIP | quote }}
+  {{- end }}
   selector:
     app.kubernetes.io/name: {{ include "papergraph.name" . }}
     app.kubernetes.io/component: grafana

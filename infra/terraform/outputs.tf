@@ -38,6 +38,16 @@ output "papergraph_api_url" {
   value       = module.static_ip.api_url
 }
 
+output "grafana_load_balancer_ip" {
+  description = "Reserved external IP address for the PaperGraph Grafana load balancer."
+  value       = module.static_ip.grafana_ip_address
+}
+
+output "papergraph_grafana_url" {
+  description = "HTTP URL for the PaperGraph Grafana load balancer."
+  value       = module.static_ip.grafana_url
+}
+
 output "cloud_run_ui_url" {
   description = "Expected Cloud Run URL for the Streamlit UI service deployed by CI."
   value       = "https://${var.name}-ui-${data.google_project.current.number}.${var.region}.run.app"
