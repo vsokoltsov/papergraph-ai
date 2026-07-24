@@ -120,6 +120,42 @@ Ingest papers from OpenAlex with dlt:
 uv run python -m app.ingestion.run "mathematics" --limit 10
 ```
 
+Deploy and run the dltHub ingestion job:
+
+```bash
+uv run dlthub login
+uv run dlthub workspace connect
+uv run dlthub deploy
+uv run dlthub run ingest_openalex_from_dlthub -f
+```
+
+Configure the deployed dltHub job in `.dlt/config.toml`. TOML arrays are supported, so multiple
+OpenAlex topics can be ingested in one run:
+
+```toml
+API_URL = "http://<papergraph-api-ip>:8000"
+INGESTION_KEYWORDS = [
+  "graph rag",
+  "mathematics graph theory",
+  "topological data analysis"
+]
+INGESTION_LIMIT = 10
+INGESTION_FROM_YEAR = 2020
+INGESTION_DLT_OUTPUT_DIR = ".dlt/openalex"
+```
+
+Use `.dlt/secrets.toml` only for sensitive dltHub runtime values, for example:
+
+```toml
+INGESTION_API_TOKEN = "optional-token-for-the-api-ingestion-endpoint"
+```
+
+After changing `.dlt/config.toml` or `.dlt/secrets.toml`, sync configuration:
+
+```bash
+uv run dlthub workspace configuration sync
+```
+
 Start the backend locally:
 
 ```bash

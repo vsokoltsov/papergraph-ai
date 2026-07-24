@@ -2,11 +2,15 @@ from __future__ import annotations
 
 from typing import Any
 
-from app.ingestion.dlthub import trigger_openalex_ingestion_api
+from app.ingestion.dlthub import (
+    build_ingestion_payload,
+    ingestion_keywords,
+    trigger_openalex_ingestion_api,
+)
 from app.settings import Settings
 
 
-def test_trigger_openalex_ingestion_api_posts_configured_payload(monkeypatch) -> None:
+def test_trigger_openalex_ingestion_api_posts_configured_payloads(monkeypatch) -> None:
     calls: list[dict[str, Any]] = []
 
     monkeypatch.setattr("app.ingestion.dlthub.httpx.Client", lambda timeout: FakeClient(calls))
@@ -14,7 +18,7 @@ def test_trigger_openalex_ingestion_api_posts_configured_payload(monkeypatch) ->
     result = trigger_openalex_ingestion_api(
         Settings(
             API_URL="https://papergraph.example.com",
-            INGESTION_KEYWORD="mathematics graph theory",
+            INGESTION_KEYWORDS=["mathematics graph theory", "topology"],
             INGESTION_LIMIT=7,
             INGESTION_FROM_YEAR=2021,
             INGESTION_DLT_OUTPUT_DIR=".dlt/dlthub-openalex",
@@ -22,7 +26,15 @@ def test_trigger_openalex_ingestion_api_posts_configured_payload(monkeypatch) ->
         )
     )
 
-    assert result == {"staged_records": 7}
+    assert result == {
+        "keyword_count": 2,
+        "staged_records": 14,
+        "inserted_articles": 10,
+        "results": [
+            {"staged_records": 7, "inserted_articles": 5},
+            {"staged_records": 7, "inserted_articles": 5},
+        ],
+    }
     assert calls == [
         {
             "url": "https://papergraph.example.com/ingestions/openalex",
@@ -33,8 +45,39 @@ def test_trigger_openalex_ingestion_api_posts_configured_payload(monkeypatch) ->
                 "dlt_output_dir": ".dlt/dlthub-openalex",
             },
             "headers": {"Authorization": "Bearer token"},
-        }
+        },
+        {
+            "url": "https://papergraph.example.com/ingestions/openalex",
+            "json": {
+                "keyword": "topology",
+                "limit": 7,
+                "from_year": 2021,
+                "dlt_output_dir": ".dlt/dlthub-openalex",
+            },
+            "headers": {"Authorization": "Bearer token"},
+        },
     ]
+
+
+def test_ingestion_keywords_uses_list_before_single_keyword() -> None:
+    assert ingestion_keywords(
+        Settings(
+            INGESTION_KEYWORD="graph rag",
+            INGESTION_KEYWORDS=[" mathematics ", "", "topology"],
+        )
+    ) == ["mathematics", "topology"]
+
+
+def test_ingestion_keywords_falls_back_to_single_keyword() -> None:
+    assert ingestion_keywords(Settings(INGESTION_KEYWORD=" graph rag ")) == ["graph rag"]
+
+
+def test_build_ingestion_payload_omits_missing_from_year() -> None:
+    assert build_ingestion_payload(Settings(INGESTION_FROM_YEAR=None), "graph rag") == {
+        "keyword": "graph rag",
+        "limit": 10,
+        "dlt_output_dir": ".dlt/openalex",
+    }
 
 
 class FakeResponse:
@@ -42,7 +85,7 @@ class FakeResponse:
         pass
 
     def json(self) -> dict[str, int]:
-        return {"staged_records": 7}
+        return {"staged_records": 7, "inserted_articles": 5}
 
 
 class FakeClient:
