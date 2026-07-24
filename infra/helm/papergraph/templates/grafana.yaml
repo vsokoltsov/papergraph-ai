@@ -18,6 +18,7 @@ spec:
         app.kubernetes.io/name: {{ include "papergraph.name" . }}
         app.kubernetes.io/component: grafana
     spec:
+      serviceAccountName: {{ .Values.serviceAccount.name }}
       containers:
         - name: grafana
           image: {{ .Values.monitoring.grafana.image | quote }}
@@ -34,10 +35,38 @@ spec:
           volumeMounts:
             - name: datasources
               mountPath: /etc/grafana/provisioning/datasources
+            - name: dashboard-providers
+              mountPath: /etc/grafana/provisioning/dashboards
+            - name: dashboards
+              mountPath: /var/lib/grafana/dashboards
+        {{- if .Values.monitoring.grafana.dashboards.sync.enabled }}
+        - name: dashboard-sync
+          image: {{ .Values.monitoring.grafana.dashboards.sync.image | quote }}
+          command:
+            - /bin/sh
+            - -c
+            - |
+              set -eu
+              while true; do
+                gcloud storage rsync -r {{ printf "gs://%s/%s" .Values.monitoring.grafana.dashboards.bucket .Values.monitoring.grafana.dashboards.prefix | quote }} /var/lib/grafana/dashboards || true
+                sleep {{ .Values.monitoring.grafana.dashboards.sync.intervalSeconds }}
+              done
+          env:
+            - name: CLOUDSDK_CORE_DISABLE_PROMPTS
+              value: "1"
+          volumeMounts:
+            - name: dashboards
+              mountPath: /var/lib/grafana/dashboards
+        {{- end }}
       volumes:
         - name: datasources
           configMap:
             name: {{ include "papergraph.name" . }}-grafana-datasources
+        - name: dashboard-providers
+          configMap:
+            name: {{ include "papergraph.name" . }}-grafana-dashboard-providers
+        - name: dashboards
+          emptyDir: {}
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -60,6 +89,26 @@ data:
         uid: Tempo
         access: proxy
         url: http://{{ include "papergraph.name" . }}-tempo:{{ .Values.monitoring.tempo.port }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "papergraph.name" . }}-grafana-dashboard-providers
+  labels:
+    {{- include "papergraph.labels" . | nindent 4 }}
+data:
+  dashboards.yml: |
+    apiVersion: 1
+    providers:
+      - name: PaperGraph
+        orgId: 1
+        folder: PaperGraph
+        type: file
+        disableDeletion: false
+        updateIntervalSeconds: 10
+        allowUiUpdates: true
+        options:
+          path: /var/lib/grafana/dashboards
 ---
 apiVersion: v1
 kind: Service

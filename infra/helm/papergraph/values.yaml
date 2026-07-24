@@ -118,3 +118,10 @@ monitoring:
     anonymousAdmin: true
     serviceType: ClusterIP
     loadBalancerIP: ""
+    dashboards:
+      bucket: ""
+      prefix: dashboards
+      sync:
+        enabled: false
+        image: google/cloud-sdk:slim
+        intervalSeconds: 60
