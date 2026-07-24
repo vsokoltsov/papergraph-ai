@@ -84,6 +84,16 @@ Local URLs:
 - 🧠 Neo4j Browser: `http://localhost:7474`
 - 🔎 Qdrant API: `http://localhost:6333`
 
+GCP Grafana URL is exposed by Terraform:
+
+```bash
+cd infra/terraform
+terraform output papergraph_grafana_url
+```
+
+The Helm deployment uses the reserved `GRAFANA_LOAD_BALANCER_IP` GitHub Actions variable and exposes
+Grafana as a Kubernetes `LoadBalancer` service.
+
 ## 🚀 How To Run The Project
 
 Install dependencies:
@@ -161,6 +171,18 @@ Deploy the app and monitoring:
 helm upgrade --install papergraph-ai infra/helm/papergraph \
   --namespace papergraph-ai \
   --create-namespace
+```
+
+For a production-style deployment with public API and Grafana load balancers, pass:
+
+```bash
+helm upgrade --install papergraph-ai infra/helm/papergraph \
+  --namespace papergraph-ai \
+  --create-namespace \
+  --set api.serviceType=LoadBalancer \
+  --set-string api.loadBalancerIP="$(terraform -chdir=infra/terraform output -raw api_load_balancer_ip)" \
+  --set monitoring.grafana.serviceType=LoadBalancer \
+  --set-string monitoring.grafana.loadBalancerIP="$(terraform -chdir=infra/terraform output -raw grafana_load_balancer_ip)"
 ```
 
 Container images are built by GitHub Actions and pushed to Artifact Registry. Terraform creates the
