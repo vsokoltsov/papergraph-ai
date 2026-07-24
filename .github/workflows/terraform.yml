@@ -53,15 +53,13 @@ jobs:
       - name: Create Terraform plugin cache directory
         run: mkdir -p "$TF_PLUGIN_CACHE_DIR"
 
-      - name: Cache Terraform initialization
+      - name: Cache Terraform provider plugins
         uses: actions/cache@v4
         with:
-          path: |
-            .terraform.d/plugin-cache
-            infra/terraform/.terraform
-          key: terraform-init-${{ runner.os }}-${{ hashFiles('infra/terraform/.terraform.lock.hcl', 'infra/terraform/**/*.tf') }}
+          path: .terraform.d/plugin-cache
+          key: terraform-providers-${{ runner.os }}-${{ hashFiles('infra/terraform/.terraform.lock.hcl') }}
           restore-keys: |
-            terraform-init-${{ runner.os }}-
+            terraform-providers-${{ runner.os }}-
 
       - name: Initialize Terraform
         run: terraform init -backend=false
@@ -86,15 +84,19 @@ jobs:
       - name: Set up Terraform
         uses: hashicorp/setup-terraform@v3
 
-      - name: Restore Terraform initialization cache
+      - name: Create Terraform plugin cache directory
+        run: mkdir -p "$TF_PLUGIN_CACHE_DIR"
+
+      - name: Restore Terraform provider plugin cache
         uses: actions/cache/restore@v4
         with:
-          path: |
-            .terraform.d/plugin-cache
-            infra/terraform/.terraform
-          key: terraform-init-${{ runner.os }}-${{ hashFiles('infra/terraform/.terraform.lock.hcl', 'infra/terraform/**/*.tf') }}
+          path: .terraform.d/plugin-cache
+          key: terraform-providers-${{ runner.os }}-${{ hashFiles('infra/terraform/.terraform.lock.hcl') }}
           restore-keys: |
-            terraform-init-${{ runner.os }}-
+            terraform-providers-${{ runner.os }}-
+
+      - name: Initialize Terraform for validation
+        run: terraform init -backend=false
 
       - name: Validate Terraform
         run: terraform validate
