@@ -58,6 +58,21 @@ module "static_ip" {
   depends_on = [module.project_services]
 }
 
+module "grafana_dashboards_bucket" {
+  source     = "./modules/gcs_bucket"
+  project_id = var.project_id
+  name       = "${var.project_id}-${var.name}-${var.environment}-grafana-dashboards"
+  region     = var.region
+  object_admin_members = toset([
+    "serviceAccount:${module.github_oidc.service_account_email}",
+  ])
+  object_viewer_members = toset([
+    "serviceAccount:${module.workload_identity.service_account_email}",
+  ])
+
+  depends_on = [module.project_services, module.github_oidc, module.workload_identity]
+}
+
 module "workload_identity" {
   source        = "./modules/workload_identity"
   project_id    = var.project_id
@@ -135,6 +150,7 @@ module "github_actions" {
     LOGFIRE_ENABLED                    = tostring(var.logfire_enabled)
     API_LOAD_BALANCER_IP               = module.static_ip.api_ip_address
     GRAFANA_LOAD_BALANCER_IP           = module.static_ip.grafana_ip_address
+    GRAFANA_DASHBOARDS_BUCKET          = module.grafana_dashboards_bucket.bucket_name
     PAPERGRAPH_API_URL                 = module.static_ip.api_url
     PAPERGRAPH_GRAFANA_URL             = module.static_ip.grafana_url
     SECRET_MANAGER_PROJECT_ID          = var.project_id
@@ -146,5 +162,6 @@ module "github_actions" {
     module.artifact_registry,
     module.secret_manager,
     module.static_ip,
+    module.grafana_dashboards_bucket,
   ]
 }

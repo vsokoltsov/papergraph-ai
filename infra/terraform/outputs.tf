@@ -48,6 +48,11 @@ output "papergraph_grafana_url" {
   value       = module.static_ip.grafana_url
 }
 
+output "grafana_dashboards_bucket" {
+  description = "GCS bucket used for generated Grafana dashboards."
+  value       = module.grafana_dashboards_bucket.bucket_name
+}
+
 output "cloud_run_ui_url" {
   description = "Expected Cloud Run URL for the Streamlit UI service deployed by CI."
   value       = "https://${var.name}-ui-${data.google_project.current.number}.${var.region}.run.app"
