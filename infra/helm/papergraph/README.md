@@ -16,7 +16,8 @@ Production secrets are read from Google Secret Manager:
 - GKE workloads use External Secrets Operator to sync Google Secret Manager values into the
   `papergraph-ai-secrets` Kubernetes Secret.
 - Terraform reserves a static API load balancer IP and stores the derived API URL in the
-  `PAPERGRAPH_API_URL` GitHub Actions variable. CI passes that value to Cloud Run as `API_URL`.
+  `PAPERGRAPH_API_URL` GitHub Actions variable. CI passes that value directly to Cloud Run as the
+  UI runtime `API_URL`; it is not stored in `.env` or Google Secret Manager.
 
 The CI deployment path does not require External Secrets Operator. It reads Google Secret Manager
 values into a temporary runner directory and applies the `papergraph-ai-secrets` Kubernetes Secret

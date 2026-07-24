@@ -63,6 +63,10 @@ Terraform also writes these derived deployment values into GitHub Actions variab
 - `API_LOAD_BALANCER_IP`
 - `PAPERGRAPH_API_URL`
 
+`PAPERGRAPH_API_URL` is derived from the reserved static IP and is used by CI to configure the
+Cloud Run UI `API_URL` environment variable. Do not put this value in `.env`; before Terraform
+applies, the production URL is not known.
+
 Before running the Helm deployment in CI, install External Secrets Operator in the GKE cluster as a
 one-time platform bootstrap step. The Helm chart creates the `SecretStore` and `ExternalSecret`
 resources, but the operator and CRDs are a cluster prerequisite. Install it with an operator/admin

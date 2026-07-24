@@ -407,6 +407,8 @@ jobs:
 
           kubectl create namespace "${{ vars.HELM_NAMESPACE }}" --dry-run=client -o yaml | kubectl apply -f -
 
+          secret_args=()
+
           for secret_name in \
             OPENALEX_API_KEY \
             OPENAI_API_KEY \
@@ -414,24 +416,28 @@ jobs:
             NEO4J_URI \
             NEO4J_USER \
             NEO4J_PASSWORD \
-            POSTGRES_PASSWORD \
-            LOGFIRE_API_KEY
+            POSTGRES_PASSWORD
           do
             gcloud secrets versions access latest \
               --project "${{ vars.SECRET_MANAGER_PROJECT_ID }}" \
               --secret "$secret_name" > "$secret_dir/$secret_name"
+            secret_args+=("--from-file=${secret_name}=${secret_dir}/${secret_name}")
+          done
+
+          for secret_name in LOGFIRE_API_KEY
+          do
+            if gcloud secrets versions access latest \
+              --project "${{ vars.SECRET_MANAGER_PROJECT_ID }}" \
+              --secret "$secret_name" > "$secret_dir/$secret_name"; then
+              secret_args+=("--from-file=${secret_name}=${secret_dir}/${secret_name}")
+            else
+              echo "Skipping optional Secret Manager key: $secret_name"
+            fi
           done
 
           kubectl create secret generic "${{ vars.HELM_RELEASE }}-secrets" \
             --namespace "${{ vars.HELM_NAMESPACE }}" \
-            --from-file=OPENALEX_API_KEY="$secret_dir/OPENALEX_API_KEY" \
-            --from-file=OPENAI_API_KEY="$secret_dir/OPENAI_API_KEY" \
-            --from-file=QDRANT_URL="$secret_dir/QDRANT_URL" \
-            --from-file=NEO4J_URI="$secret_dir/NEO4J_URI" \
-            --from-file=NEO4J_USER="$secret_dir/NEO4J_USER" \
-            --from-file=NEO4J_PASSWORD="$secret_dir/NEO4J_PASSWORD" \
-            --from-file=POSTGRES_PASSWORD="$secret_dir/POSTGRES_PASSWORD" \
-            --from-file=LOGFIRE_API_KEY="$secret_dir/LOGFIRE_API_KEY" \
+            "${secret_args[@]}" \
             --dry-run=client \
             -o yaml | kubectl apply -f -
 
