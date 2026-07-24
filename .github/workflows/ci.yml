@@ -467,6 +467,8 @@ jobs:
             --set-string config.logfireEnabled="${{ vars.LOGFIRE_ENABLED }}" \
             --set api.serviceType=LoadBalancer \
             --set-string api.loadBalancerIP="${{ vars.API_LOAD_BALANCER_IP }}" \
+            --set monitoring.grafana.serviceType=LoadBalancer \
+            --set-string monitoring.grafana.loadBalancerIP="${{ vars.GRAFANA_LOAD_BALANCER_IP }}" \
             --set qdrant.enabled=true \
             --set neo4j.enabled=true \
             --set externalSecrets.enabled=false \
