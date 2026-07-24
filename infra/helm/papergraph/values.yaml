@@ -34,6 +34,27 @@ api:
       cpu: 1000m
       memory: 1Gi
 
+evaluation:
+  llm:
+    enabled: true
+    schedule: "0 3 * * *"
+    suspend: false
+    dataset: app/eval/llm/llm_dataset.json
+    outputFormat: markdown
+    limit: 2
+    approaches:
+      - vector_only
+      - vector_plus_graph
+    backoffLimit: 1
+    activeDeadlineSeconds: 1800
+    resources:
+      requests:
+        cpu: 250m
+        memory: 512Mi
+      limits:
+        cpu: 1000m
+        memory: 1Gi
+
 cloudRunUi:
   enabled: true
   location: europe-west1

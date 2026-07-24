@@ -1,0 +1,66 @@
+{{- if and .Values.monitoring.enabled .Values.evaluation.llm.enabled }}
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ include "papergraph.name" . }}-llm-eval
+  labels:
+    {{- include "papergraph.labels" . | nindent 4 }}
+    app.kubernetes.io/component: llm-eval
+spec:
+  schedule: {{ .Values.evaluation.llm.schedule | quote }}
+  suspend: {{ .Values.evaluation.llm.suspend }}
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: {{ .Values.evaluation.llm.backoffLimit }}
+      activeDeadlineSeconds: {{ .Values.evaluation.llm.activeDeadlineSeconds }}
+      template:
+        metadata:
+          labels:
+            app.kubernetes.io/name: {{ include "papergraph.name" . }}
+            app.kubernetes.io/component: llm-eval
+        spec:
+          restartPolicy: Never
+          serviceAccountName: {{ .Values.serviceAccount.name }}
+          containers:
+            - name: llm-eval
+              image: {{ .Values.images.api | quote }}
+              imagePullPolicy: IfNotPresent
+              command:
+                - uv
+                - run
+                - python
+                - -m
+                - app.eval.llm.evaluate
+                - --dataset
+                - {{ .Values.evaluation.llm.dataset | quote }}
+                - --output-format
+                - {{ .Values.evaluation.llm.outputFormat | quote }}
+                - --limit
+                - {{ .Values.evaluation.llm.limit | quote }}
+                - --approaches
+                {{- range .Values.evaluation.llm.approaches }}
+                - {{ . | quote }}
+                {{- end }}
+              envFrom:
+                - configMapRef:
+                    name: {{ include "papergraph.name" . }}-config
+                - secretRef:
+                    name: {{ include "papergraph.name" . }}-secrets
+              env:
+                - name: POSTGRES_PASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: {{ include "papergraph.name" . }}-secrets
+                      key: POSTGRES_PASSWORD
+                - name: POSTGRES_DATABASE_URL
+                  value: {{ printf "postgresql+asyncpg://%s:$(POSTGRES_PASSWORD)@%s:5432/%s" .Values.external.postgresUser .Values.external.postgresHost .Values.external.postgresDatabase | quote }}
+                - name: POSTGRES_SYNC_DATABASE_URL
+                  value: {{ printf "postgresql+psycopg://%s:$(POSTGRES_PASSWORD)@%s:5432/%s" .Values.external.postgresUser .Values.external.postgresHost .Values.external.postgresDatabase | quote }}
+                - name: OTEL_TRACING_ENABLED
+                  value: "false"
+              resources:
+                {{- toYaml .Values.evaluation.llm.resources | nindent 16 }}
+{{- end }}

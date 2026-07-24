@@ -501,3 +501,20 @@ GitHub Actions runs an `llm-eval` job after tests. The job starts Qdrant and Neo
 Push and pull-request builds run only the smoke LLM evaluation: two questions and the `vector_only` / `vector_plus_graph` approaches. Use the manual `workflow_dispatch` run with `llm_eval_mode=full` for the complete LLM benchmark.
 
 The job is marked `continue-on-error` because it depends on external services and API keys. This keeps normal CI useful while still producing evaluation artifacts when the environment is available.
+
+### Cloud Metrics
+
+The deployed Helm chart also creates a Kubernetes `CronJob` named `papergraph-ai-llm-eval`.
+It runs the same evaluator inside GKE, where it can push metrics to the in-cluster Prometheus
+Pushgateway:
+
+```bash
+kubectl create job papergraph-ai-llm-eval-manual \
+  --namespace papergraph-ai \
+  --from=cronjob/papergraph-ai-llm-eval
+```
+
+The deployment workflow triggers one evaluation Job after the Helm release is updated and waits for
+it to finish. The scheduled job runs daily with the smoke settings from the Helm values file. Grafana
+LLM evaluation panels are populated only after this Kubernetes job runs successfully and Prometheus
+scrapes the Pushgateway.
