@@ -1,5 +1,7 @@
 # Python-generated files
+.git/
 __pycache__/
+**/__pycache__/
 *.py[oc]
 build/
 dist/
@@ -8,6 +10,9 @@ wheels/
 .coverage
 coverage.xml
 htmlcov/
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
 
 # Virtual environments
 .venv
@@ -29,9 +34,19 @@ gcp.json
 
 # Terraform local state and plans
 **/.terraform/
+**/.terraform.lock.hcl
 *.tfstate
 *.tfstate.*
 *.tfplan
 .terraform.lock.hcl
 terraform.tfvars
+
+# Local database and monitoring storage
+qdrant_storage/
+neo4j_data/
+neo4j_logs/
+prometheus_storage/
+tempo_storage/
+grafana_storage/
+
 .DS_Store
