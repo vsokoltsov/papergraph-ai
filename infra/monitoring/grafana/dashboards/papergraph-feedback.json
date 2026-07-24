@@ -50,7 +50,11 @@
       "options": {
         "legend": {
           "displayMode": "list",
-          "placement": "right"
+          "placement": "right",
+          "values": [
+            "value",
+            "percent"
+          ]
         },
         "pieType": "donut"
       },
@@ -61,7 +65,7 @@
             "uid": "PostgreSQL"
           },
           "format": "table",
-          "rawSql": "\n                    SELECT\n                        rating AS metric,\n                        count(*) AS value\n                    FROM feedback\n                    WHERE $__timeFilter(created_at)\n                    GROUP BY rating\n                    ORDER BY value DESC\n                    ",
+          "rawSql": "\n                    SELECT\n                        count(*) FILTER (WHERE rating = 'thumbs_up') AS thumbs_up,\n                        count(*) FILTER (WHERE rating = 'thumbs_down') AS thumbs_down\n                    FROM feedback\n                    WHERE $__timeFilter(created_at)\n                    ",
           "refId": "A"
         }
       ],

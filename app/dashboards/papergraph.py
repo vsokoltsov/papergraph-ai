@@ -558,12 +558,10 @@ DASHBOARDS = [
                     "piechart",
                     """
                     SELECT
-                        rating AS metric,
-                        count(*) AS value
+                        count(*) FILTER (WHERE rating = 'thumbs_up') AS thumbs_up,
+                        count(*) FILTER (WHERE rating = 'thumbs_down') AS thumbs_down
                     FROM feedback
                     WHERE $__timeFilter(created_at)
-                    GROUP BY rating
-                    ORDER BY value DESC
                     """,
                     {"h": 8, "w": 12, "x": 12, "y": 0},
                     options={
@@ -571,6 +569,7 @@ DASHBOARDS = [
                         "legend": {
                             "displayMode": "list",
                             "placement": "right",
+                            "values": ["value", "percent"],
                         },
                     },
                 ),

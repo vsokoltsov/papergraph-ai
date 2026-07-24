@@ -73,6 +73,21 @@ def test_feedback_dashboard_has_at_least_five_charts() -> None:
     )
 
 
+def test_feedback_rating_split_uses_separate_rating_fields() -> None:
+    dashboard_file = next(
+        dashboard_file
+        for dashboard_file in DASHBOARDS
+        if dashboard_file.name == "papergraph-feedback.json"
+    )
+    dashboard = encoded_dashboard(dashboard_file)
+    panel = next(panel for panel in dashboard["panels"] if panel["title"] == "Rating Split")
+    query = panel["targets"][0]["rawSql"]
+
+    assert "AS thumbs_up" in query
+    assert "AS thumbs_down" in query
+    assert "GROUP BY rating" not in query
+
+
 def test_generate_writes_dashboard_json_files(tmp_path, monkeypatch) -> None:
     monkeypatch.setattr(generate, "OUTPUT_DIR", tmp_path)
 
