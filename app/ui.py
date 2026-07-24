@@ -111,7 +111,7 @@ def run_chat_turn(api_url: str, question: str) -> None:
             "run_id": run_id,
         }
         st.session_state.messages.append(assistant_message)
-        render_feedback_form(api_url, run_id)
+        st.rerun()
 
 
 def run_agent(api_url: str, question: str) -> dict[str, Any]:

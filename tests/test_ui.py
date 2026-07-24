@@ -245,7 +245,6 @@ def test_render_feedback_form_displays_buttons(monkeypatch) -> None:
 
 def test_run_chat_turn_streams_answer_and_saves_message(monkeypatch) -> None:
     fake_streamlit = FakeStreamlit()
-    feedback_calls: list[tuple[str, str]] = []
     monkeypatch.setattr(ui, "st", fake_streamlit)
     monkeypatch.setattr(
         ui,
@@ -270,11 +269,6 @@ def test_run_chat_turn_streams_answer_and_saves_message(monkeypatch) -> None:
             ]
         ),
     )
-    monkeypatch.setattr(
-        ui,
-        "render_feedback_form",
-        lambda api_url, run_id: feedback_calls.append((api_url, run_id)),
-    )
 
     run_chat_turn("http://api", "What is GraphRAG?")
 
@@ -297,7 +291,7 @@ def test_run_chat_turn_streams_answer_and_saves_message(monkeypatch) -> None:
         status_call["label"] for status_call in fake_streamlit.status_calls
     ]
     assert {"value": 10, "text": "Research in progress..."} in fake_streamlit.progress_calls
-    assert feedback_calls == [("http://api", "run-1")]
+    assert fake_streamlit.rerun_called is True
 
 
 def test_run_chat_turn_displays_stream_error(monkeypatch) -> None:
@@ -447,6 +441,7 @@ class FakeStreamlit:
         self.status_updates: list[dict[str, str]] = []
         self.text_inputs: list[dict[str, str]] = []
         self.progress_calls: list[dict[str, str | int]] = []
+        self.rerun_called = False
 
     def chat_message(self, role: str) -> FakeContext:
         return FakeContext(self)
@@ -494,3 +489,6 @@ class FakeStreamlit:
 
     def error(self, message: str) -> None:
         self.errors.append(message)
+
+    def rerun(self) -> None:
+        self.rerun_called = True
