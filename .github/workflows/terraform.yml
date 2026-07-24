@@ -14,8 +14,8 @@ on:
   workflow_dispatch:
 
 jobs:
-  terraform-check:
-    name: Validate Terraform
+  terraform-fmt:
+    name: Check Terraform Formatting
     runs-on: ubuntu-latest
 
     defaults:
@@ -32,8 +32,69 @@ jobs:
       - name: Check Terraform formatting
         run: terraform fmt -check -recursive
 
+  terraform-init:
+    name: Initialize Terraform
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: infra/terraform
+
+    env:
+      TF_PLUGIN_CACHE_DIR: ${{ github.workspace }}/.terraform.d/plugin-cache
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Create Terraform plugin cache directory
+        run: mkdir -p "$TF_PLUGIN_CACHE_DIR"
+
+      - name: Cache Terraform initialization
+        uses: actions/cache@v4
+        with:
+          path: |
+            .terraform.d/plugin-cache
+            infra/terraform/.terraform
+          key: terraform-init-${{ runner.os }}-${{ hashFiles('infra/terraform/.terraform.lock.hcl', 'infra/terraform/**/*.tf') }}
+          restore-keys: |
+            terraform-init-${{ runner.os }}-
+
       - name: Initialize Terraform
         run: terraform init -backend=false
+
+  terraform-validate:
+    name: Validate Terraform
+    runs-on: ubuntu-latest
+    needs:
+      - terraform-init
+
+    defaults:
+      run:
+        working-directory: infra/terraform
+
+    env:
+      TF_PLUGIN_CACHE_DIR: ${{ github.workspace }}/.terraform.d/plugin-cache
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Restore Terraform initialization cache
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            .terraform.d/plugin-cache
+            infra/terraform/.terraform
+          key: terraform-init-${{ runner.os }}-${{ hashFiles('infra/terraform/.terraform.lock.hcl', 'infra/terraform/**/*.tf') }}
+          restore-keys: |
+            terraform-init-${{ runner.os }}-
 
       - name: Validate Terraform
         run: terraform validate
