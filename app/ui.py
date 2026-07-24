@@ -250,10 +250,20 @@ def render_research_block(
     expanded: bool,
 ) -> None:
     with st.status(label, state=state, expanded=expanded):
+        if state == "running":
+            st.progress(running_progress_value(events), text="Research in progress...")
+
         if events:
             render_event_lines(events)
         else:
             st.caption("Waiting for agent events...")
+
+
+def running_progress_value(events: list[dict[str, Any]]) -> int:
+    if not events:
+        return 10
+
+    return min(90, 20 + (len(deduplicate_visible_events(events)) * 10))
 
 
 def render_event_lines(events: list[dict[str, Any]]) -> None:

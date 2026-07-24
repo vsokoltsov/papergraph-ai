@@ -296,6 +296,7 @@ def test_run_chat_turn_streams_answer_and_saves_message(monkeypatch) -> None:
     assert "Streaming final answer" not in [
         status_call["label"] for status_call in fake_streamlit.status_calls
     ]
+    assert {"value": 10, "text": "Research in progress..."} in fake_streamlit.progress_calls
     assert feedback_calls == [("http://api", "run-1")]
 
 
@@ -445,6 +446,7 @@ class FakeStreamlit:
         self.status_calls: list[dict[str, str | bool]] = []
         self.status_updates: list[dict[str, str]] = []
         self.text_inputs: list[dict[str, str]] = []
+        self.progress_calls: list[dict[str, str | int]] = []
 
     def chat_message(self, role: str) -> FakeContext:
         return FakeContext(self)
@@ -466,6 +468,9 @@ class FakeStreamlit:
 
     def caption(self, value: str) -> None:
         self.captions.append(value)
+
+    def progress(self, value: int, text: str) -> None:
+        self.progress_calls.append({"value": value, "text": text})
 
     def text_input(self, label: str, key: str, placeholder: str) -> str:
         self.text_inputs.append(
