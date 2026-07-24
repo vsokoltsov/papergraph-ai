@@ -86,10 +86,16 @@ module "secret_manager" {
   secret_ids = toset([
     "OPENALEX_API_KEY",
     "OPENAI_API_KEY",
-    "QDRANT_URL",
-    "NEO4J_URI",
     "NEO4J_USER",
     "NEO4J_PASSWORD",
+    "POSTGRES_PASSWORD",
+    "LOGFIRE_API_KEY",
+  ])
+  secret_values = {
+    POSTGRES_PASSWORD = var.postgres_password
+    LOGFIRE_API_KEY   = var.logfire_api_key
+  }
+  managed_secret_value_ids = toset([
     "POSTGRES_PASSWORD",
     "LOGFIRE_API_KEY",
   ])
@@ -105,23 +111,32 @@ module "github_actions" {
   source     = "./modules/github_actions"
   repository = var.github_repository
   variables = {
-    GCP_PROJECT_ID                 = var.project_id
-    GCP_REGION                     = var.region
-    GAR_HOST                       = "${var.region}-docker.pkg.dev"
-    GAR_REPOSITORY                 = module.artifact_registry.repository_id
-    ARTIFACT_REGISTRY_URL          = module.artifact_registry.repository_url
-    GCP_WORKLOAD_IDENTITY_PROVIDER = module.github_oidc.provider_name
-    GCP_SERVICE_ACCOUNT            = module.github_oidc.service_account_email
-    GKE_CLUSTER_NAME               = module.gke.cluster_name
-    GKE_CLUSTER_REGION             = module.gke.cluster_region
-    HELM_RELEASE                   = var.name
-    HELM_NAMESPACE                 = var.name
-    GKE_WORKLOAD_SERVICE_ACCOUNT   = module.workload_identity.service_account_email
-    CLOUD_SQL_PRIVATE_IP           = module.cloud_sql.private_ip_address
-    API_LOAD_BALANCER_IP           = module.static_ip.api_ip_address
-    PAPERGRAPH_API_URL             = module.static_ip.api_url
-    SECRET_MANAGER_PROJECT_ID      = var.project_id
-    CLOUD_RUN_UI_SERVICE_NAME      = "${var.name}-ui"
+    GCP_PROJECT_ID                     = var.project_id
+    GCP_REGION                         = var.region
+    GAR_HOST                           = "${var.region}-docker.pkg.dev"
+    GAR_REPOSITORY                     = module.artifact_registry.repository_id
+    ARTIFACT_REGISTRY_URL              = module.artifact_registry.repository_url
+    GCP_WORKLOAD_IDENTITY_PROVIDER     = module.github_oidc.provider_name
+    GCP_SERVICE_ACCOUNT                = module.github_oidc.service_account_email
+    GKE_CLUSTER_NAME                   = module.gke.cluster_name
+    GKE_CLUSTER_REGION                 = module.gke.cluster_region
+    HELM_RELEASE                       = var.name
+    HELM_NAMESPACE                     = var.name
+    GKE_WORKLOAD_SERVICE_ACCOUNT       = module.workload_identity.service_account_email
+    CLOUD_SQL_PRIVATE_IP               = module.cloud_sql.private_ip_address
+    POSTGRES_DATABASE                  = var.postgres_database
+    POSTGRES_USER                      = var.postgres_user
+    QDRANT_URL                         = "http://${var.name}-qdrant:6333"
+    NEO4J_URI                          = "bolt://${var.name}-neo4j:7687"
+    PROMETHEUS_PUSHGATEWAY_URL         = "http://${var.name}-pushgateway:9091"
+    OTEL_SERVICE_NAME                  = var.name
+    OTEL_TRACING_ENABLED               = tostring(var.otel_tracing_enabled)
+    OTEL_EXPORTER_OTLP_TRACES_ENDPOINT = "http://${var.name}-tempo:4318/v1/traces"
+    LOGFIRE_ENABLED                    = tostring(var.logfire_enabled)
+    API_LOAD_BALANCER_IP               = module.static_ip.api_ip_address
+    PAPERGRAPH_API_URL                 = module.static_ip.api_url
+    SECRET_MANAGER_PROJECT_ID          = var.project_id
+    CLOUD_RUN_UI_SERVICE_NAME          = "${var.name}-ui"
   }
 
   depends_on = [

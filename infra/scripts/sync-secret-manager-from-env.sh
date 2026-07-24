@@ -7,12 +7,8 @@ ENV_FILE="${2:-.env}"
 required_keys=(
   OPENALEX_API_KEY
   OPENAI_API_KEY
-  QDRANT_URL
-  NEO4J_URI
   NEO4J_USER
   NEO4J_PASSWORD
-  POSTGRES_PASSWORD
-  LOGFIRE_API_KEY
 )
 
 if [[ ! -f "$ENV_FILE" ]]; then
@@ -33,37 +29,11 @@ read_env_value() {
   ' "$ENV_FILE" | tail -n 1
 }
 
-read_tfvars_value() {
-  local key="$1"
-  local tfvars_file="infra/terraform/terraform.tfvars"
-
-  if [[ ! -f "$tfvars_file" ]]; then
-    return
-  fi
-
-  awk -F= -v key="$key" '
-    $1 ~ "^[[:space:]]*" key "[[:space:]]*$" {
-      sub(/^[^=]*=/, "")
-      gsub(/^[[:space:]]+|[[:space:]]+$/, "")
-      gsub(/^"|"$/, "")
-      print
-    }
-  ' "$tfvars_file" | tail -n 1
-}
-
 resolve_value() {
   local key="$1"
   local value
 
   value="$(read_env_value "$key")"
-
-  if [[ -z "$value" && "$key" == "QDRANT_URL" ]]; then
-    value="$(read_env_value "QUADRANT_URL")"
-  fi
-
-  if [[ -z "$value" && "$key" == "POSTGRES_PASSWORD" ]]; then
-    value="$(read_tfvars_value "postgres_password")"
-  fi
 
   printf "%s" "$value"
 }

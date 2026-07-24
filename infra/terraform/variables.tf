@@ -51,6 +51,25 @@ variable "postgres_tier" {
   default     = "db-f1-micro"
 }
 
+variable "logfire_enabled" {
+  description = "Whether deployed workloads should enable Logfire instrumentation."
+  type        = bool
+  default     = true
+}
+
+variable "logfire_api_key" {
+  description = "Logfire write token. Stored in Secret Manager by Terraform when provided."
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
+variable "otel_tracing_enabled" {
+  description = "Whether deployed workloads should export OpenTelemetry traces."
+  type        = bool
+  default     = true
+}
+
 variable "github_owner" {
   description = "GitHub repository owner."
   type        = string

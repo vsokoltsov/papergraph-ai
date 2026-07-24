@@ -34,9 +34,10 @@ The token needs repository access to `vsokoltsov/papergraph-ai` and repository *
 read/write permission. Terraform reads existing variables during `plan` and creates/updates them
 during `apply`.
 
-Terraform manages only non-secret GitHub Actions variables. Application secrets are stored in
-Google Secret Manager. After Terraform creates the secret containers and IAM bindings, sync values
-from `.env`:
+Terraform manages infrastructure-derived GitHub Actions variables and Terraform-owned Secret
+Manager values. Application/provider credentials that are not created by Terraform are stored in
+Google Secret Manager. After Terraform creates the secret containers and IAM bindings, sync the
+non-Terraform credentials from `.env`:
 
 ```bash
 make sync-gcp-secrets
@@ -51,10 +52,11 @@ The sync script uploads these keys:
 
 - `OPENALEX_API_KEY`
 - `OPENAI_API_KEY`
-- `QDRANT_URL`
-- `NEO4J_URI`
 - `NEO4J_USER`
 - `NEO4J_PASSWORD`
+
+Terraform writes these Secret Manager values directly from sensitive Terraform variables:
+
 - `POSTGRES_PASSWORD`
 - `LOGFIRE_API_KEY`
 
@@ -62,10 +64,26 @@ Terraform also writes these derived deployment values into GitHub Actions variab
 
 - `API_LOAD_BALANCER_IP`
 - `PAPERGRAPH_API_URL`
+- `QDRANT_URL`
+- `NEO4J_URI`
+- `POSTGRES_DATABASE`
+- `POSTGRES_USER`
+- `PROMETHEUS_PUSHGATEWAY_URL`
+- `OTEL_SERVICE_NAME`
+- `OTEL_TRACING_ENABLED`
+- `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT`
+- `LOGFIRE_ENABLED`
 
 `PAPERGRAPH_API_URL` is derived from the reserved static IP and is used by CI to configure the
 Cloud Run UI `API_URL` environment variable. Do not put this value in `.env`; before Terraform
 applies, the production URL is not known.
+
+`QDRANT_URL` and `NEO4J_URI` are derived from the Helm-managed Kubernetes services:
+
+- `http://papergraph-ai-qdrant:6333`
+- `bolt://papergraph-ai-neo4j:7687`
+
+They are GitHub Actions variables, not Terraform inputs and not Secret Manager values.
 
 Before running the Helm deployment in CI, install External Secrets Operator in the GKE cluster as a
 one-time platform bootstrap step. The Helm chart creates the `SecretStore` and `ExternalSecret`

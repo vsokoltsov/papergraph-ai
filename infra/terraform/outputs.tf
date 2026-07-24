@@ -38,6 +38,11 @@ output "papergraph_api_url" {
   value       = module.static_ip.api_url
 }
 
+output "cloud_run_ui_url" {
+  description = "Expected Cloud Run URL for the Streamlit UI service deployed by CI."
+  value       = "https://${var.name}-ui-${data.google_project.current.number}.${var.region}.run.app"
+}
+
 output "workload_identity_service_account" {
   description = "Google service account used by PaperGraph workloads."
   value       = module.workload_identity.service_account_email

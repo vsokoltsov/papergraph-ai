@@ -23,3 +23,10 @@ resource "google_secret_manager_secret_iam_member" "accessor" {
   role      = "roles/secretmanager.secretAccessor"
   member    = "serviceAccount:${each.value.service_account_email}"
 }
+
+resource "google_secret_manager_secret_version" "managed" {
+  for_each = setintersection(var.secret_ids, var.managed_secret_value_ids)
+
+  secret      = google_secret_manager_secret.managed[each.value].id
+  secret_data = var.secret_values[each.value]
+}

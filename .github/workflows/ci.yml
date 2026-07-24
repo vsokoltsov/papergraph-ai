@@ -412,8 +412,6 @@ jobs:
           for secret_name in \
             OPENALEX_API_KEY \
             OPENAI_API_KEY \
-            QDRANT_URL \
-            NEO4J_URI \
             NEO4J_USER \
             NEO4J_PASSWORD \
             POSTGRES_PASSWORD
@@ -452,9 +450,20 @@ jobs:
             --set-string images.ui="${{ vars.ARTIFACT_REGISTRY_URL }}/ui:${{ github.sha }}" \
             --set-string externalSecrets.projectId="${{ vars.SECRET_MANAGER_PROJECT_ID }}" \
             --set-string external.postgresHost="${{ vars.CLOUD_SQL_PRIVATE_IP }}" \
+            --set-string external.postgresDatabase="${{ vars.POSTGRES_DATABASE }}" \
+            --set-string external.postgresUser="${{ vars.POSTGRES_USER }}" \
             --set-string external.apiUrl="${{ vars.PAPERGRAPH_API_URL }}" \
+            --set-string external.qdrantUrl="${{ vars.QDRANT_URL }}" \
+            --set-string external.neo4jUri="${{ vars.NEO4J_URI }}" \
+            --set-string config.prometheusPushgatewayUrl="${{ vars.PROMETHEUS_PUSHGATEWAY_URL }}" \
+            --set-string config.otelServiceName="${{ vars.OTEL_SERVICE_NAME }}" \
+            --set-string config.otelTracingEnabled="${{ vars.OTEL_TRACING_ENABLED }}" \
+            --set-string config.otelExporterOtlpTracesEndpoint="${{ vars.OTEL_EXPORTER_OTLP_TRACES_ENDPOINT }}" \
+            --set-string config.logfireEnabled="${{ vars.LOGFIRE_ENABLED }}" \
             --set api.serviceType=LoadBalancer \
             --set-string api.loadBalancerIP="${{ vars.API_LOAD_BALANCER_IP }}" \
+            --set qdrant.enabled=true \
+            --set neo4j.enabled=true \
             --set externalSecrets.enabled=false \
             --set secrets.create=false \
             --set cloudRunUi.enabled=false

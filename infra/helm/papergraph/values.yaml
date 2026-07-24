@@ -35,6 +35,10 @@ config:
   qdrantCollectionName: papers
   qdrantVectorSize: "384"
   otelServiceName: papergraph-ai
+  otelTracingEnabled: "true"
+  otelExporterOtlpTracesEndpoint: http://papergraph-ai-tempo:4318/v1/traces
+  prometheusPushgatewayUrl: http://papergraph-ai-pushgateway:9091
+  logfireEnabled: "true"
 
 external:
   apiUrl: https://api.example.com
@@ -56,7 +60,6 @@ secrets:
   openaiApiKey: ""
   neo4jUser: neo4j
   neo4jPassword: ""
-  postgresPassword: ""
   logfireApiKey: ""
 
 qdrant:

@@ -19,7 +19,8 @@ data:
   {{- else }}
   NEO4J_URI: {{ .Values.external.neo4jUri | quote }}
   {{- end }}
-  PROMETHEUS_PUSHGATEWAY_URL: {{ printf "http://%s-pushgateway:%v" (include "papergraph.name" .) .Values.monitoring.pushgateway.port | quote }}
+  PROMETHEUS_PUSHGATEWAY_URL: {{ .Values.config.prometheusPushgatewayUrl | quote }}
+  OTEL_TRACING_ENABLED: {{ .Values.config.otelTracingEnabled | quote }}
   OTEL_SERVICE_NAME: {{ .Values.config.otelServiceName | quote }}
-  OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: {{ printf "http://%s-tempo:%v/v1/traces" (include "papergraph.name" .) .Values.monitoring.tempo.otlpHttpPort | quote }}
-  LOGFIRE_ENABLED: "true"
+  OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: {{ .Values.config.otelExporterOtlpTracesEndpoint | quote }}
+  LOGFIRE_ENABLED: {{ .Values.config.logfireEnabled | quote }}

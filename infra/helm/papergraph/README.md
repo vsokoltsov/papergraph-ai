@@ -11,13 +11,17 @@ Production defaults use managed Qdrant Cloud and Neo4j AuraDB endpoints. Use the
 for each service when possible, then pass those endpoint values to Helm. In-cluster Qdrant and Neo4j
 StatefulSets are available only through `values-dev.yaml`.
 
-Production secrets are read from Google Secret Manager:
+Production credentials are read from Google Secret Manager. Infrastructure-derived URLs and
+runtime flags are not stored as secrets; CI passes them to Helm from GitHub Actions variables
+created by Terraform:
 
 - GKE workloads use External Secrets Operator to sync Google Secret Manager values into the
   `papergraph-ai-secrets` Kubernetes Secret.
 - Terraform reserves a static API load balancer IP and stores the derived API URL in the
   `PAPERGRAPH_API_URL` GitHub Actions variable. CI passes that value directly to Cloud Run as the
   UI runtime `API_URL`; it is not stored in `.env` or Google Secret Manager.
+- Terraform also provides the Helm-derived Qdrant URL, Neo4j URI, Postgres user/database,
+  Pushgateway URL, and OTEL settings consumed by the Helm chart.
 
 The CI deployment path does not require External Secrets Operator. It reads Google Secret Manager
 values into a temporary runner directory and applies the `papergraph-ai-secrets` Kubernetes Secret
