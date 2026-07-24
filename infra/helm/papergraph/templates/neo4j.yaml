@@ -28,18 +28,11 @@ spec:
             - name: bolt
               containerPort: {{ .Values.neo4j.boltPort }}
           env:
-            - name: NEO4J_USER
-              valueFrom:
-                secretKeyRef:
-                  name: {{ include "papergraph.name" . }}-secrets
-                  key: NEO4J_USER
-            - name: NEO4J_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: {{ include "papergraph.name" . }}-secrets
-                  key: NEO4J_PASSWORD
             - name: NEO4J_AUTH
-              value: "$(NEO4J_USER)/$(NEO4J_PASSWORD)"
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "papergraph.name" . }}-secrets
+                  key: NEO4J_AUTH
           volumeMounts:
             - name: data
               mountPath: /data

@@ -27,7 +27,7 @@ spec:
             - run
             - alembic
             - upgrade
-            - feedback@head
+            - heads
           envFrom:
             - configMapRef:
                 name: {{ include "papergraph.name" . }}-config

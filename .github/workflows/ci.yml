@@ -433,6 +433,11 @@ jobs:
             fi
           done
 
+          printf "%s/%s" \
+            "$(cat "$secret_dir/NEO4J_USER")" \
+            "$(cat "$secret_dir/NEO4J_PASSWORD")" > "$secret_dir/NEO4J_AUTH"
+          secret_args+=("--from-file=NEO4J_AUTH=${secret_dir}/NEO4J_AUTH")
+
           kubectl create secret generic "${{ vars.HELM_RELEASE }}-secrets" \
             --namespace "${{ vars.HELM_NAMESPACE }}" \
             "${secret_args[@]}" \
