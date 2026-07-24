@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
+import dlt
 import httpx
 from dlt.hub import run
 
@@ -19,16 +20,88 @@ from app.settings import Settings, get_settings
         "tags": ["papergraph", "openalex", "ingestion"],
     },
 )
-def ingest_openalex_from_dlthub() -> dict[str, Any]:
+def ingest_openalex_from_dlthub(
+    api_url: str | None = None,
+    ingestion_keywords: list[str] | None = None,
+    ingestion_limit: int = 10,
+    ingestion_from_year: int | None = None,
+    ingestion_dlt_output_dir: str = ".dlt/openalex",
+    ingestion_api_token: str = "",
+) -> dict[str, Any]:
     """Trigger the deployed PaperGraph API to run OpenAlex ingestion.
 
     Returns:
         API response containing staged and inserted record counts.
     """
 
-    settings = get_settings()
+    settings = build_dlthub_ingestion_settings(
+        api_url=api_url,
+        ingestion_keywords=ingestion_keywords,
+        ingestion_limit=ingestion_limit,
+        ingestion_from_year=ingestion_from_year,
+        ingestion_dlt_output_dir=ingestion_dlt_output_dir,
+        ingestion_api_token=ingestion_api_token,
+    )
     configure_logging(settings.LOG_LEVEL)
     return trigger_openalex_ingestion_api(settings=settings)
+
+
+def build_dlthub_ingestion_settings(
+    api_url: str | None = None,
+    ingestion_keywords: list[str] | None = None,
+    ingestion_limit: int = 10,
+    ingestion_from_year: int | None = None,
+    ingestion_dlt_output_dir: str = ".dlt/openalex",
+    ingestion_api_token: str = "",
+) -> Settings:
+    """Build ingestion settings from dltHub job config and optional injected values.
+
+    Args:
+        api_url: Optional API URL injected by dltHub.
+        ingestion_keywords: Optional keyword list injected by dltHub.
+        ingestion_limit: Optional per-keyword article limit.
+        ingestion_from_year: Optional first publication year.
+        ingestion_dlt_output_dir: dlt output directory used by the API.
+        ingestion_api_token: Optional ingestion endpoint bearer token.
+
+    Returns:
+        Application settings scoped to the dltHub ingestion job.
+    """
+
+    job_section = "jobs.dlthub.ingest_openalex_from_dlthub"
+    base_settings = get_settings()
+    resolved_api_url = api_url or dlt.config.get(f"{job_section}.api_url", str)
+    if not resolved_api_url:
+        raise ValueError(
+            "Missing dltHub config: set [jobs.dlthub.ingest_openalex_from_dlthub].api_url"
+        )
+
+    resolved_keywords = ingestion_keywords or dlt.config.get(
+        f"{job_section}.ingestion_keywords",
+        list,
+    )
+    resolved_limit = dlt.config.get(f"{job_section}.ingestion_limit", int) or ingestion_limit
+    resolved_from_year = (
+        dlt.config.get(f"{job_section}.ingestion_from_year", int) or ingestion_from_year
+    )
+    resolved_output_dir = (
+        dlt.config.get(f"{job_section}.ingestion_dlt_output_dir", str) or ingestion_dlt_output_dir
+    )
+    resolved_token = (
+        ingestion_api_token
+        or dlt.secrets.get(f"{job_section}.ingestion_api_token", str)
+        or dlt.config.get(f"{job_section}.ingestion_api_token", str)
+    )
+
+    return Settings(
+        API_URL=resolved_api_url,
+        INGESTION_KEYWORD=base_settings.INGESTION_KEYWORD,
+        INGESTION_KEYWORDS=resolved_keywords or base_settings.INGESTION_KEYWORDS,
+        INGESTION_LIMIT=resolved_limit,
+        INGESTION_FROM_YEAR=resolved_from_year,
+        INGESTION_DLT_OUTPUT_DIR=resolved_output_dir,
+        INGESTION_API_TOKEN=resolved_token or "",
+    )
 
 
 def trigger_openalex_ingestion_api(settings: Settings) -> dict[str, Any]:

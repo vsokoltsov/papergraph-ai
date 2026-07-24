@@ -16,13 +16,23 @@ api:
   port: 8000
   serviceType: ClusterIP
   loadBalancerIP: ""
+  livenessProbe:
+    initialDelaySeconds: 60
+    periodSeconds: 30
+    timeoutSeconds: 10
+    failureThreshold: 6
+  readinessProbe:
+    initialDelaySeconds: 20
+    periodSeconds: 10
+    timeoutSeconds: 10
+    failureThreshold: 6
   resources:
     requests:
-      cpu: 100m
-      memory: 256Mi
-    limits:
-      cpu: 500m
+      cpu: 250m
       memory: 512Mi
+    limits:
+      cpu: 1000m
+      memory: 1Gi
 
 cloudRunUi:
   enabled: true

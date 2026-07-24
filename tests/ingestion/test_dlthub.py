@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 from app.ingestion.dlthub import (
+    build_dlthub_ingestion_settings,
     build_ingestion_payload,
     ingestion_keywords,
     trigger_openalex_ingestion_api,
@@ -78,6 +79,48 @@ def test_build_ingestion_payload_omits_missing_from_year() -> None:
         "limit": 10,
         "dlt_output_dir": ".dlt/openalex",
     }
+
+
+def test_build_dlthub_ingestion_settings_reads_job_config(monkeypatch) -> None:
+    config_values = {
+        "jobs.dlthub.ingest_openalex_from_dlthub.api_url": "https://api.example.com",
+        "jobs.dlthub.ingest_openalex_from_dlthub.ingestion_keywords": ["graph rag"],
+        "jobs.dlthub.ingest_openalex_from_dlthub.ingestion_limit": 25,
+        "jobs.dlthub.ingest_openalex_from_dlthub.ingestion_from_year": 2021,
+        "jobs.dlthub.ingest_openalex_from_dlthub.ingestion_dlt_output_dir": ".dlt/out",
+    }
+
+    monkeypatch.setattr(
+        "app.ingestion.dlthub.dlt.config.get",
+        lambda key, expected_type: config_values.get(key),
+    )
+    monkeypatch.setattr(
+        "app.ingestion.dlthub.dlt.secrets.get",
+        lambda key, expected_type: "secret-token",
+    )
+
+    settings = build_dlthub_ingestion_settings()
+
+    assert settings.API_URL == "https://api.example.com"
+    assert settings.INGESTION_KEYWORDS == ["graph rag"]
+    assert settings.INGESTION_LIMIT == 25
+    assert settings.INGESTION_FROM_YEAR == 2021
+    assert settings.INGESTION_DLT_OUTPUT_DIR == ".dlt/out"
+    assert settings.INGESTION_API_TOKEN == "secret-token"
+
+
+def test_build_dlthub_ingestion_settings_requires_api_url(monkeypatch) -> None:
+    monkeypatch.setattr(
+        "app.ingestion.dlthub.dlt.config.get",
+        lambda key, expected_type: None,
+    )
+
+    try:
+        build_dlthub_ingestion_settings()
+    except ValueError as error:
+        assert "api_url" in str(error)
+    else:
+        raise AssertionError("expected missing api_url to fail")
 
 
 class FakeResponse:
