@@ -13,6 +13,9 @@ from app.clients.openalex import OpenAlexClient
 from app.db.neo4j import get_neo4j_driver
 from app.db.postgres import get_postgres_engine
 from app.db.qdrant import get_qdrant_client
+from app.ingestion.models import OpenAlexIngestionResult
+from app.ingestion.openalex import ingest_openalex_articles
+from app.ingestion.run import build_papers_service, push_ingestion_metrics
 from app.metrics import estimate_tokens
 from app.repositories.feedback import AgentRunRecord, FeedbackRepository
 from app.repositories.graph import GraphRepository
@@ -141,6 +144,38 @@ async def execute_research_agent(
         )
     )
     return {"answer": answer, "events": events}
+
+
+@tracer.start_as_current_span("backend.ingest_openalex")
+async def run_openalex_ingestion(
+    keyword: str,
+    limit: int,
+    from_year: int | None = None,
+    dlt_output_dir: str | None = None,
+) -> OpenAlexIngestionResult:
+    """Run OpenAlex ingestion from the API process.
+
+    Args:
+        keyword: OpenAlex keyword query.
+        limit: Maximum number of papers to ingest.
+        from_year: Optional first publication year to include.
+        dlt_output_dir: Optional dlt filesystem output directory override.
+
+    Returns:
+        Summary of the dlt staging and database insertion work.
+    """
+
+    settings = get_settings()
+    result = await ingest_openalex_articles(
+        service=build_papers_service(),
+        query=keyword,
+        limit=limit,
+        api_key=settings.OPENALEX_API_KEY,
+        dlt_output_dir=dlt_output_dir or settings.INGESTION_DLT_OUTPUT_DIR,
+        from_year=from_year,
+    )
+    push_ingestion_metrics(settings.PROMETHEUS_PUSHGATEWAY_URL)
+    return result
 
 
 async def stream_sse(events: AsyncIterator[dict[str, Any]]) -> AsyncIterator[str]:

@@ -6,6 +6,7 @@ from fastapi.testclient import TestClient
 import app.api as api
 import app.api.lifespan as api_lifespan
 from app.api import create_app
+from app.ingestion.models import OpenAlexIngestionResult
 from app.repositories.feedback import AgentRunRecord, FeedbackRecord
 from app.settings import Settings
 
@@ -124,6 +125,84 @@ def test_feedback_endpoint_rejects_unknown_rating() -> None:
     )
 
     assert response.status_code == 422
+
+
+def test_openalex_ingestion_endpoint_runs_ingestion() -> None:
+    calls: list[tuple[str, int, int | None, str | None]] = []
+
+    async def fake_ingestion_runner(
+        keyword: str,
+        limit: int,
+        from_year: int | None,
+        dlt_output_dir: str | None,
+    ) -> OpenAlexIngestionResult:
+        calls.append((keyword, limit, from_year, dlt_output_dir))
+        return OpenAlexIngestionResult(
+            query=keyword,
+            staged_records=3,
+            inserted_articles=3,
+            dlt_output_dir="/tmp/openalex",
+            dlt_load_info="loaded",
+        )
+
+    app = create_app(
+        agent_runner=_fake_agent_runner,
+        ingestion_runner=fake_ingestion_runner,
+    )
+    client = TestClient(app)
+
+    response = client.post(
+        "/ingestions/openalex",
+        json={
+            "keyword": "mathematics graph theory",
+            "limit": 3,
+            "from_year": 2020,
+            "dlt_output_dir": "/tmp/openalex",
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "query": "mathematics graph theory",
+        "staged_records": 3,
+        "inserted_articles": 3,
+        "dlt_output_dir": "/tmp/openalex",
+        "dlt_load_info": "loaded",
+    }
+    assert calls == [("mathematics graph theory", 3, 2020, "/tmp/openalex")]
+
+
+def test_openalex_ingestion_endpoint_checks_optional_token() -> None:
+    async def fake_ingestion_runner(
+        keyword: str,
+        limit: int,
+        from_year: int | None,
+        dlt_output_dir: str | None,
+    ) -> OpenAlexIngestionResult:
+        return OpenAlexIngestionResult(
+            query=keyword,
+            staged_records=0,
+            inserted_articles=0,
+            dlt_output_dir=dlt_output_dir or ".dlt/openalex",
+            dlt_load_info="loaded",
+        )
+
+    app = create_app(
+        agent_runner=_fake_agent_runner,
+        ingestion_runner=fake_ingestion_runner,
+        settings=Settings(INGESTION_API_TOKEN="secret-token"),
+    )
+    client = TestClient(app)
+
+    rejected = client.post("/ingestions/openalex", json={"keyword": "graph rag"})
+    accepted = client.post(
+        "/ingestions/openalex",
+        json={"keyword": "graph rag"},
+        headers={"Authorization": "Bearer secret-token"},
+    )
+
+    assert rejected.status_code == 401
+    assert accepted.status_code == 200
 
 
 def test_get_feedback_repository_uses_postgres_settings(monkeypatch) -> None:

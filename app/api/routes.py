@@ -1,15 +1,22 @@
 from collections.abc import AsyncIterator
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Header, HTTPException, Request
 from fastapi.responses import StreamingResponse
 
-from app.api.lifespan import get_feedback_repository, run_research_agent, run_research_agent_stream
+from app.api.lifespan import (
+    get_feedback_repository,
+    run_openalex_ingestion,
+    run_research_agent,
+    run_research_agent_stream,
+)
 from app.api.models import (
     AgentRunRequest,
     AgentRunResponse,
     AgentStreamRunner,
     FeedbackRequest,
     FeedbackResponse,
+    OpenAlexIngestionRequest,
+    OpenAlexIngestionResponse,
 )
 from app.repositories.feedback import FeedbackRecord
 
@@ -53,6 +60,28 @@ async def create_feedback(request: FeedbackRequest, app_request: Request) -> Fee
         )
     )
     return FeedbackResponse(status="ok")
+
+
+@router.post("/ingestions/openalex")
+async def ingest_openalex(
+    request: OpenAlexIngestionRequest,
+    app_request: Request,
+    authorization: str | None = Header(default=None),
+) -> OpenAlexIngestionResponse:
+    settings = app_request.app.state.settings
+    if settings.INGESTION_API_TOKEN:
+        expected = f"Bearer {settings.INGESTION_API_TOKEN}"
+        if authorization != expected:
+            raise HTTPException(status_code=401, detail="Invalid ingestion token")
+
+    runner = app_request.app.state.ingestion_runner or run_openalex_ingestion
+    result = await runner(
+        request.keyword,
+        request.limit,
+        request.from_year,
+        request.dlt_output_dir,
+    )
+    return OpenAlexIngestionResponse.model_validate(result.__dict__)
 
 
 async def run_research_agent_sse(

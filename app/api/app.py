@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 
-from app.api.models import AgentRunner, AgentStreamRunner, FeedbackWriter
+from app.api.models import AgentRunner, AgentStreamRunner, FeedbackWriter, IngestionRunner
 from app.api.routes import router
 from app.logging import configure_logging
 from app.metrics import instrument_prometheus
@@ -12,6 +12,7 @@ def create_app(
     agent_runner: AgentRunner | None = None,
     agent_stream_runner: AgentStreamRunner | None = None,
     feedback_repository: FeedbackWriter | None = None,
+    ingestion_runner: IngestionRunner | None = None,
     settings: Settings | None = None,
 ) -> FastAPI:
     if agent_runner is None:
@@ -28,6 +29,8 @@ def create_app(
     app.state.agent_runner = agent_runner
     app.state.agent_stream_runner = agent_stream_runner
     app.state.feedback_repository = feedback_repository
+    app.state.ingestion_runner = ingestion_runner
+    app.state.settings = settings or get_settings()
     app.include_router(router)
     return app
 
