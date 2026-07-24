@@ -28,6 +28,11 @@ class Settings(BaseSettings):
     LOGFIRE_ENABLED: bool = True
     LOGFIRE_TOKEN: str = ""
     LOGFIRE_API_KEY: str = ""
+    INGESTION_KEYWORD: str = "graph rag"
+    INGESTION_LIMIT: int = 10
+    INGESTION_FROM_YEAR: int | None = None
+    INGESTION_DLT_OUTPUT_DIR: str = ".dlt/openalex"
+    INGESTION_API_TOKEN: str = ""
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
