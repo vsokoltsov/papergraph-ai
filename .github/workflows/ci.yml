@@ -371,11 +371,50 @@ jobs:
             ${{ vars.ARTIFACT_REGISTRY_URL }}/ui:${{ github.sha }}
             ${{ vars.ARTIFACT_REGISTRY_URL }}/ui:latest
 
+  upload-dashboards:
+    name: Generate and Upload Grafana Dashboards
+    runs-on: ubuntu-latest
+    needs:
+      - test
+    if: ${{ github.event_name != 'pull_request' }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Generate dashboards
+        run: uv run python -m app.dashboards.generate
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}
+
+      - name: Upload dashboards to GCS
+        run: |
+          gcloud storage rsync \
+            --recursive \
+            --delete-unmatched-destination-objects \
+            infra/monitoring/grafana/dashboards \
+            "gs://${{ vars.GRAFANA_DASHBOARDS_BUCKET }}/dashboards"
+
   deploy:
     name: Deploy
     runs-on: ubuntu-latest
     needs:
       - build-images
+      - upload-dashboards
     if: ${{ github.event_name != 'pull_request' }}
 
     steps:
@@ -469,6 +508,8 @@ jobs:
             --set-string api.loadBalancerIP="${{ vars.API_LOAD_BALANCER_IP }}" \
             --set monitoring.grafana.serviceType=LoadBalancer \
             --set-string monitoring.grafana.loadBalancerIP="${{ vars.GRAFANA_LOAD_BALANCER_IP }}" \
+            --set monitoring.grafana.dashboards.sync.enabled=true \
+            --set-string monitoring.grafana.dashboards.bucket="${{ vars.GRAFANA_DASHBOARDS_BUCKET }}" \
             --set qdrant.enabled=true \
             --set neo4j.enabled=true \
             --set externalSecrets.enabled=false \
