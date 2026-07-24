@@ -398,6 +398,30 @@ wheels = [
 ]
 
 [[package]]
+name = "cron-descriptor"
+version = "2.1.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/91/75/b44b05ae7d1e49b59a27a917c44e04ce9aa4cebdd05dac42ba7df06a91b4/cron_descriptor-2.1.0.tar.gz", hash = "sha256:ecddb8b2f6c5286398949aaefe185364666af74f33b01877c61378e1fd4e38e6", size = 50221, upload-time = "2026-06-02T16:26:28.223Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/0d/41/c476c41cb88dbbba83e0685dd331b9d32599f1e4a94ca223b02437a3d83b/cron_descriptor-2.1.0-py3-none-any.whl", hash = "sha256:e280efae0e375e2cbc62846f833888f12c7921d2d11ab0dca598f94c51af8639", size = 74734, upload-time = "2026-06-02T16:26:26.919Z" },
+]
+
+[[package]]
+name = "croniter"
+version = "6.2.4"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "python-dateutil" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/37/57/2e2a65aee2a70483cb28e2b7e15a072d00a523207593b44400d4717bb100/croniter-6.2.4.tar.gz", hash = "sha256:fc124f751b1b04805c2a04b061898b436b45ab2320b045e1e052ea895de65189", size = 166267, upload-time = "2026-07-10T09:52:59.955Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/cd/ba/d678e5bd329646ca51d3c92addbc77804e86d21f4b6b6a027218e6abb010/croniter-6.2.4-py3-none-any.whl", hash = "sha256:8ef3d544107a5c05a150a2d78f8bf5a8eb9c5c4d93405a736b824109574e3f4d", size = 46677, upload-time = "2026-07-10T09:52:58.425Z" },
+]
+
+[[package]]
 name = "cryptography"
 version = "49.0.0"
 source = { registry = "https://pypi.org/simple" }
@@ -491,6 +515,39 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/6b/4e/393ef8cf88219f05a4f0285151148c39222232f7fa53d7627131a272dc04/dlt-1.29.0.tar.gz", hash = "sha256:ebba7f04c20d61fb813ed284184b463492dac741782c0465a00adf752fd3bcc8", size = 1108405, upload-time = "2026-07-13T09:31:06.325Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/4f/cd/fec9313e4c13b1775e158516478d63ccaac6978c6a9dda425529183bd54c/dlt-1.29.0-py3-none-any.whl", hash = "sha256:06d45510762fe2ad5ee794ef139f5a2015720b816be1e0872363cb724744194c", size = 1388187, upload-time = "2026-07-13T09:31:03.95Z" },
+]
+
+[package.optional-dependencies]
+hub = [
+    { name = "dlthub" },
+    { name = "dlthub-client" },
+]
+
+[[package]]
+name = "dlthub"
+version = "0.29.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/7c/58/155eeebd831c402127289ff6d97dcb0e7cf0072c753470098e71b46952e8/dlthub-0.29.0.tar.gz", hash = "sha256:60e514446747d6e7a9005e74a71b2ccfa3759ba822af7515a40ac34b0afd47f2", size = 170583, upload-time = "2026-07-10T13:21:28.316Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/45/89/6daedf3a2d78324ae153d4b23307663d01e06439679dd6e2015bf15af799/dlthub-0.29.0-py3-none-any.whl", hash = "sha256:1f96df548d290bd62712eeaa35e8d89bff05ef027b19e31ebb86cab74d21ceb5", size = 227905, upload-time = "2026-07-10T13:21:29.786Z" },
+]
+
+[[package]]
+name = "dlthub-client"
+version = "0.28.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "attrs" },
+    { name = "cron-descriptor" },
+    { name = "croniter" },
+    { name = "httpx" },
+    { name = "pathspec" },
+    { name = "pyjwt" },
+    { name = "tabulate" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/ff/87/53412615805aadf53d3c95e9d94e7f703b33a8fe8f441ff3bf9d73e0f7ea/dlthub_client-0.28.1.tar.gz", hash = "sha256:2a47d950aa5e1ba77409655b2cecb5f3e626a2964a3952fb32a9d3292e6ba1db", size = 146048, upload-time = "2026-07-07T11:09:04.182Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/ee/93/453841023154ef23d8def64cc4d48ee4e61a76451303a3046fe405230bb6/dlthub_client-0.28.1-py3-none-any.whl", hash = "sha256:04f7b86181e09db69714ac297ad7fa829c7c939096bbc2a65cb781df511082bf", size = 336690, upload-time = "2026-07-07T11:09:02.927Z" },
 ]
 
 [[package]]
@@ -1926,7 +1983,7 @@ source = { virtual = "." }
 dependencies = [
     { name = "alembic" },
     { name = "asyncpg" },
-    { name = "dlt" },
+    { name = "dlt", extra = ["hub"] },
     { name = "fastapi" },
     { name = "httpx" },
     { name = "langchain" },
@@ -1968,7 +2025,7 @@ dev = [
 requires-dist = [
     { name = "alembic", specifier = ">=1.13.2" },
     { name = "asyncpg", specifier = ">=0.31.0" },
-    { name = "dlt", specifier = ">=1.29.0" },
+    { name = "dlt", extras = ["hub"], specifier = ">=1.29.0" },
     { name = "fastapi", specifier = ">=0.139.2" },
     { name = "httpx", specifier = ">=0.27.0" },
     { name = "langchain", specifier = ">=1.3.14" },
@@ -2004,6 +2061,15 @@ dev = [
     { name = "ruff", specifier = ">=0.6.0" },
     { name = "testcontainers", specifier = ">=4.8.0" },
     { name = "ty", specifier = ">=0.0.1a21" },
+]
+
+[[package]]
+name = "pathspec"
+version = "1.1.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/5a/82/42f767fc1c1143d6fd36efb827202a2d997a375e160a71eb2888a925aac1/pathspec-1.1.1.tar.gz", hash = "sha256:17db5ecd524104a120e173814c90367a96a98d07c45b2e10c2f3919fff91bf5a", size = 135180, upload-time = "2026-04-27T01:46:08.907Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/f1/d9/7fb5aa316bc299258e68c73ba3bddbc499654a07f151cba08f6153988714/pathspec-1.1.1-py3-none-any.whl", hash = "sha256:a00ce642f577bf7f473932318056212bc4f8bfdf53128c78bbd5af0b9b20b189", size = 57328, upload-time = "2026-04-27T01:46:07.06Z" },
 ]
 
 [[package]]
