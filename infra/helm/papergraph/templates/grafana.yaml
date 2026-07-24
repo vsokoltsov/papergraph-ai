@@ -32,6 +32,11 @@ spec:
               value: Admin
             - name: GF_AUTH_DISABLE_LOGIN_FORM
               value: {{ ternary "true" "false" .Values.monitoring.grafana.anonymousAdmin | quote }}
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "papergraph.name" . }}-secrets
+                  key: POSTGRES_PASSWORD
           volumeMounts:
             - name: datasources
               mountPath: /etc/grafana/provisioning/datasources
@@ -89,6 +94,19 @@ data:
         uid: Tempo
         access: proxy
         url: http://{{ include "papergraph.name" . }}-tempo:{{ .Values.monitoring.tempo.port }}
+      - name: PostgreSQL
+        type: postgres
+        uid: PostgreSQL
+        access: proxy
+        url: {{ printf "%s:5432" .Values.external.postgresHost | quote }}
+        user: {{ .Values.external.postgresUser | quote }}
+        database: {{ .Values.external.postgresDatabase | quote }}
+        secureJsonData:
+          password: ${POSTGRES_PASSWORD}
+        jsonData:
+          sslmode: disable
+          postgresVersion: 1600
+          timescaledb: false
 ---
 apiVersion: v1
 kind: ConfigMap
