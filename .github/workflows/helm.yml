@@ -1,0 +1,139 @@
+name: Helm
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "infra/helm/**"
+      - ".github/workflows/helm.yml"
+  pull_request:
+    paths:
+      - "infra/helm/**"
+      - ".github/workflows/helm.yml"
+  workflow_dispatch:
+
+env:
+  HELM_CHART_PATH: infra/helm/papergraph
+
+jobs:
+  helm-yaml:
+    name: Check Helm YAML
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check chart and values YAML
+        run: |
+          ruby -e 'require "yaml"; ARGV.each { |path| YAML.load_file(path); puts "valid yaml: #{path}" }' \
+            infra/helm/papergraph/Chart.yaml \
+            infra/helm/papergraph/values.yaml \
+            infra/helm/papergraph/values-dev.yaml
+
+  helm-cache:
+    name: Prepare Helm Cache
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+
+      - name: Cache Helm directories
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/helm
+            ~/.config/helm
+            ~/.local/share/helm
+          key: helm-${{ runner.os }}-${{ hashFiles('infra/helm/papergraph/Chart.yaml', 'infra/helm/papergraph/values*.yaml') }}
+          restore-keys: |
+            helm-${{ runner.os }}-
+
+      - name: Build Helm dependencies
+        run: helm dependency build "$HELM_CHART_PATH"
+
+  helm-lint:
+    name: Lint Helm Chart
+    runs-on: ubuntu-latest
+    needs:
+      - helm-cache
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+
+      - name: Restore Helm cache
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            ~/.cache/helm
+            ~/.config/helm
+            ~/.local/share/helm
+          key: helm-${{ runner.os }}-${{ hashFiles('infra/helm/papergraph/Chart.yaml', 'infra/helm/papergraph/values*.yaml') }}
+          restore-keys: |
+            helm-${{ runner.os }}-
+
+      - name: Lint Helm chart
+        run: helm lint "$HELM_CHART_PATH"
+
+  helm-template:
+    name: Render Helm Chart
+    runs-on: ubuntu-latest
+    needs:
+      - helm-cache
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+
+      - name: Restore Helm cache
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            ~/.cache/helm
+            ~/.config/helm
+            ~/.local/share/helm
+          key: helm-${{ runner.os }}-${{ hashFiles('infra/helm/papergraph/Chart.yaml', 'infra/helm/papergraph/values*.yaml') }}
+          restore-keys: |
+            helm-${{ runner.os }}-
+
+      - name: Render default Helm chart
+        run: helm template papergraph-ai "$HELM_CHART_PATH"
+
+  helm-template-dev:
+    name: Render Helm Chart with Dev Values
+    runs-on: ubuntu-latest
+    needs:
+      - helm-cache
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+
+      - name: Restore Helm cache
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            ~/.cache/helm
+            ~/.config/helm
+            ~/.local/share/helm
+          key: helm-${{ runner.os }}-${{ hashFiles('infra/helm/papergraph/Chart.yaml', 'infra/helm/papergraph/values*.yaml') }}
+          restore-keys: |
+            helm-${{ runner.os }}-
+
+      - name: Render Helm chart with dev values
+        run: helm template papergraph-ai "$HELM_CHART_PATH" --values "$HELM_CHART_PATH/values-dev.yaml"
