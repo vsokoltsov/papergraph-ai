@@ -64,6 +64,7 @@ Terraform also writes these derived deployment values into GitHub Actions variab
 
 - `API_LOAD_BALANCER_IP`
 - `GRAFANA_LOAD_BALANCER_IP`
+- `GRAFANA_DASHBOARDS_BUCKET`
 - `PAPERGRAPH_API_URL`
 - `PAPERGRAPH_GRAFANA_URL`
 - `QDRANT_URL`
@@ -82,6 +83,10 @@ applies, the production URL is not known.
 
 `PAPERGRAPH_GRAFANA_URL` is derived from the reserved Grafana static IP. CI uses
 `GRAFANA_LOAD_BALANCER_IP` to expose Grafana through a Kubernetes `LoadBalancer` service.
+
+`GRAFANA_DASHBOARDS_BUCKET` points to the Terraform-managed GCS bucket used for generated Grafana
+dashboard JSON. CI uploads generated dashboards to `gs://$GRAFANA_DASHBOARDS_BUCKET/dashboards`,
+and the Grafana pod reads them with the GKE Workload Identity service account.
 
 `QDRANT_URL` and `NEO4J_URI` are derived from the Helm-managed Kubernetes services:
 

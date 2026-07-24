@@ -94,6 +94,21 @@ terraform output papergraph_grafana_url
 The Helm deployment uses the reserved `GRAFANA_LOAD_BALANCER_IP` GitHub Actions variable and exposes
 Grafana as a Kubernetes `LoadBalancer` service.
 
+Grafana dashboards are generated in CI and uploaded to a Terraform-managed GCS bucket:
+
+```bash
+cd infra/terraform
+terraform output grafana_dashboards_bucket
+```
+
+The Grafana pod runs a dashboard sync container that copies JSON dashboards from:
+
+```text
+gs://<grafana_dashboards_bucket>/dashboards
+```
+
+into Grafana's provisioned dashboard directory.
+
 ## 🚀 How To Run The Project
 
 Install dependencies:
